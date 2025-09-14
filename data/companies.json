@@ -1,0 +1,41 @@
+[
+  {
+    "name": "ABC Metal Ltd.",
+    "taxNo": "1234567890",
+    "phone": "0212 555 1234",
+    "email": "info@abcmetal.com",
+    "address": "İstanbul, Türkiye",
+    "website": "www.abcmetal.com",
+    "customerType": "vip",
+    "acceptsEmailNotifications": true,
+    "isFavorite": true,
+    "image": "",
+    "active": true
+  },
+  {
+    "name": "XYZ Makine A.Ş.",
+    "taxNo": "0987654321",
+    "phone": "0216 555 5678",
+    "email": "info@xyzmakine.com",
+    "address": "Ankara, Türkiye",
+    "website": "www.xyzmakine.com",
+    "customerType": "normal",
+    "acceptsEmailNotifications": false,
+    "isFavorite": false,
+    "image": "",
+    "active": true
+  },
+  {
+    "name": "Mega Endüstri",
+    "taxNo": "5555555555",
+    "phone": "0232 555 9999",
+    "email": "info@megaendustri.com",
+    "address": "İzmir, Türkiye",
+    "website": "www.megaendustri.com",
+    "customerType": "potansiyel",
+    "acceptsEmailNotifications": true,
+    "isFavorite": true,
+    "image": "",
+    "active": true
+  }
+]

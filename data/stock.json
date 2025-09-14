@@ -1,0 +1,35 @@
+[
+  {
+    "code": "STK-0001",
+    "barcode": "9876543210987",
+    "name": "Çelik Sac 2mm",
+    "quantity": 500,
+    "unit": "kg",
+    "minStock": 100,
+    "lastUpdate": "08.09.2025",
+    "image": "",
+    "active": true
+  },
+  {
+    "code": "STK-0002",
+    "barcode": "9876543210988",
+    "name": "Kaynak Teli",
+    "quantity": 200,
+    "unit": "kg",
+    "minStock": 50,
+    "lastUpdate": "07.09.2025",
+    "image": "",
+    "active": true
+  },
+  {
+    "code": "STK-0003",
+    "barcode": "9876543210989",
+    "name": "Vida M6",
+    "quantity": 1000,
+    "unit": "adet",
+    "minStock": 200,
+    "lastUpdate": "06.09.2025",
+    "image": "",
+    "active": true
+  }
+]

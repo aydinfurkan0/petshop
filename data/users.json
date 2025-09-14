@@ -1,0 +1,27 @@
+[
+  {
+    "username": "furkan",
+    "password": "123456",
+    "name": "Admin User",
+    "role": "admin",
+    "permissions": ["all"],
+    "active": true
+  }, 
+  {
+      "id": "existing_user_id",
+      "name": "furkan",
+      "username": "furkan",
+      "password": "furkan",
+      "email": "kullanici@furkatech.com",
+      "phone": "+90 555 123 4567",
+      "department": "production",
+      "role": "user",
+      "permissions": ["production"],
+      "active": true,
+      "annualLeaveDays": 14,
+      "usedLeaveDays": 0,
+      "remainingLeaveDays": 14,
+      "startDate": "2024-01-15",
+      "emergencyContact": "İrtibat Kişisi - +90 555 987 6543"
+    }
+]

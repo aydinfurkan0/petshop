@@ -1,0 +1,32 @@
+[
+  {
+    "code": "PRD-0001",
+    "barcode": "1234567890123",
+    "name": "Çelik Plaka 10mm",
+    "category": "Metal",
+    "price": 5000,
+    "stock": 200,
+    "image": "",
+    "active": true
+  },
+  {
+    "code": "PRD-0002",
+    "barcode": "1234567890124",
+    "name": "Alüminyum Profil",
+    "category": "Metal",
+    "price": 3000,
+    "stock": 150,
+    "image": "",
+    "active": true
+  },
+  {
+    "code": "PRD-0003",
+    "barcode": "1234567890125",
+    "name": "Plastik Granül",
+    "category": "Plastik",
+    "price": 2000,
+    "stock": 300,
+    "image": "",
+    "active": true
+  }
+]
