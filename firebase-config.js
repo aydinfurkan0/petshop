@@ -1,5 +1,4 @@
-// firebase-config.js - CDN Version - getUserByUsername ekle
-// Firebase CDN imports
+// firebase-config.js - CDN Version
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
 import { 
     getFirestore, 
@@ -11,7 +10,8 @@ import {
     updateDoc, 
     deleteDoc, 
     query, 
-    where 
+    where ,
+    setDoc
 } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
 // Firebase configuration
@@ -109,7 +109,14 @@ const firestoreService = {
 
     async updateCompany(companyId, companyData) {
         try {
-            await updateDoc(doc(db, 'companies', companyId), companyData);
+            // undefined değerleri temizle
+            const cleanData = {};
+            Object.keys(companyData).forEach(key => {
+                if (companyData[key] !== undefined) {
+                    cleanData[key] = companyData[key];
+                }
+            });
+            await updateDoc(doc(db, 'companies', companyId), cleanData);
             return true;
         } catch (error) {
             console.error('Error updating company:', error);
@@ -188,18 +195,6 @@ const firestoreService = {
             throw error;
         }
     },
-    
-
-async deleteStock(stockId) {
-    try {
-        await deleteDoc(doc(db, 'stock', stockId));
-        console.log('Stock deleted:', stockId);
-        return true;
-    } catch (error) {
-        console.error('Error deleting stock:', error);
-        throw error;
-    }
-},
 
     async updateStock(stockId, stockData) {
         try {
@@ -207,6 +202,17 @@ async deleteStock(stockId) {
             return true;
         } catch (error) {
             console.error('Error updating stock:', error);
+            throw error;
+        }
+    },
+
+    async deleteStock(stockId) {
+        try {
+            await deleteDoc(doc(db, 'stock', stockId));
+            console.log('Stock deleted:', stockId);
+            return true;
+        } catch (error) {
+            console.error('Error deleting stock:', error);
             throw error;
         }
     },
@@ -224,7 +230,24 @@ async deleteStock(stockId) {
 
     async addProduction(productionData) {
         try {
-            const docRef = await addDoc(collection(db, 'production'), productionData);
+            const cleanData = { ...productionData };
+            delete cleanData.id;
+            Object.keys(cleanData).forEach(key => {
+                if (cleanData[key] === undefined || cleanData[key] === null) {
+                    delete cleanData[key];
+                }
+            });
+            if (!cleanData.product && cleanData.productName) {
+                cleanData.product = cleanData.productName;
+            }
+            if (!cleanData.product) {
+                cleanData.product = 'Belirtilmemiş';
+            }
+            if (!cleanData.quantity || cleanData.quantity === 0) {
+                cleanData.quantity = 1;
+            }
+            const docRef = await addDoc(collection(db, 'production'), cleanData);
+            console.log('Production added with ID:', docRef.id);
             return docRef.id;
         } catch (error) {
             console.error('Error adding production:', error);
@@ -238,6 +261,194 @@ async deleteStock(stockId) {
             return true;
         } catch (error) {
             console.error('Error updating production:', error);
+            throw error;
+        }
+    },
+
+    async deleteProduction(productionId) {
+        try {
+            await deleteDoc(doc(db, 'production', productionId));
+            return true;
+        } catch (error) {
+            console.error('Error deleting production:', error);
+            throw error;
+        }
+    },
+
+    // Shipments
+    async getShipments() {
+        try {
+            const snapshot = await getDocs(collection(db, 'shipments'));
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error('Error getting shipments:', error);
+            throw error;
+        }
+    },
+
+    async addShipment(shipmentData) {
+        try {
+            const docRef = await addDoc(collection(db, 'shipments'), shipmentData);
+            return docRef.id;
+        } catch (error) {
+            console.error('Error adding shipment:', error);
+            throw error;
+        }
+    },
+
+    // Notifications
+    async getNotifications() {
+        try {
+            const snapshot = await getDocs(collection(db, 'notifications'));
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error('Error getting notifications:', error);
+            return [];
+        }
+    },
+
+    async addNotification(notificationData) {
+        try {
+            const docRef = await addDoc(collection(db, 'notifications'), notificationData);
+            return docRef.id;
+        } catch (error) {
+            console.error('Error adding notification:', error);
+            throw error;
+        }
+    },
+
+    async updateNotification(notificationId, data) {
+        try {
+            await updateDoc(doc(db, 'notifications', notificationId), data);
+            return true;
+        } catch (error) {
+            console.error('Error updating notification:', error);
+            throw error;
+        }
+    },
+
+    async deleteNotification(notificationId) {
+        try {
+            await deleteDoc(doc(db, 'notifications', notificationId));
+            return true;
+        } catch (error) {
+            console.error('Error deleting notification:', error);
+            throw error;
+        }
+    },
+
+    // Leave Requests
+    async getLeaveRequests() {
+        try {
+            const snapshot = await getDocs(collection(db, 'leaveRequests'));
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error('Error getting leave requests:', error);
+            return [];
+        }
+    },
+
+    async addLeaveRequest(leaveData) {
+        try {
+            const docRef = await addDoc(collection(db, 'leaveRequests'), leaveData);
+            return docRef.id;
+        } catch (error) {
+            console.error('Error adding leave request:', error);
+            throw error;
+        }
+    },
+
+    async updateLeaveRequest(leaveId, leaveData) {
+        try {
+            await updateDoc(doc(db, 'leaveRequests', leaveId), leaveData);
+            return true;
+        } catch (error) {
+            console.error('Error updating leave request:', error);
+            throw error;
+        }
+    },
+
+    async deleteLeaveRequest(leaveId) {
+        try {
+            await deleteDoc(doc(db, 'leaveRequests', leaveId));
+            return true;
+        } catch (error) {
+            console.error('Error deleting leave request:', error);
+            throw error;
+        }
+    },
+
+    async addLeaveLog(logData) {
+        try {
+            const docRef = await addDoc(collection(db, 'leaveLogs'), logData);
+            return docRef.id;
+        } catch (error) {
+            console.error('Leave log ekleme hatası:', error);
+            throw error;
+        }
+    },
+
+    async validatePassword(userId, password) {
+        try {
+            const user = await this.getUser(userId);
+            return user && user.password === password;
+        } catch (error) {
+            console.error('Password validation error:', error);
+            return false;
+        }
+    },
+
+    async getUser(userId) {
+        try {
+            const docRef = doc(db, 'users', userId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                return { id: docSnap.id, ...docSnap.data() };
+            }
+            return null;
+        } catch (error) {
+            console.error('Error getting user:', error);
+            return null;
+        }
+    },
+
+    // Recipes
+    async getRecipes() {
+        try {
+            const snapshot = await getDocs(collection(db, 'recipes'));
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error('Error getting recipes:', error);
+            throw error;
+        }
+    },
+
+    async addRecipe(recipeData) {
+        try {
+            const docRef = await addDoc(collection(db, 'recipes'), recipeData);
+            return docRef.id;
+        } catch (error) {
+            console.error('Error adding recipe:', error);
+            throw error;
+        }
+    },
+
+    async updateRecipe(recipeId, recipeData) {
+        try {
+            await updateDoc(doc(db, 'recipes', recipeId), recipeData);
+            return true;
+        } catch (error) {
+            console.error('Error updating recipe:', error);
+            throw error;
+        }
+    },
+
+    async deleteRecipe(recipeId) {
+        try {
+            await deleteDoc(doc(db, 'recipes', recipeId));
+            return true;
+        } catch (error) {
+            console.error('Error deleting recipe:', error);
             throw error;
         }
     },
@@ -282,154 +493,452 @@ async deleteStock(stockId) {
             throw error;
         }
     },
-    // Recipes
-    async getRecipes() {
+
+    // Main Categories
+    async getMainCategories() {
         try {
-            const snapshot = await getDocs(collection(db, 'recipes'));
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const snapshot = await getDocs(collection(db, 'mainCategories'));
+            return snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
         } catch (error) {
-            console.error('Error getting recipes:', error);
-            throw error;
+            console.error('Ana kategoriler alınamadı:', error);
+            return [];
         }
     },
 
-    async addRecipe(recipeData) {
+    async addMainCategory(data) {
         try {
-            const docRef = await addDoc(collection(db, 'recipes'), recipeData);
+            const docRef = await addDoc(collection(db, 'mainCategories'), data);
             return docRef.id;
         } catch (error) {
-            console.error('Error adding recipe:', error);
+            console.error('Ana kategori eklenemedi:', error);
             throw error;
         }
     },
 
-    async updateRecipe(recipeId, recipeData) {
+    async updateMainCategory(id, data) {
         try {
-            await updateDoc(doc(db, 'recipes', recipeId), recipeData);
+            await updateDoc(doc(db, 'mainCategories', id), data);
             return true;
         } catch (error) {
-            console.error('Error updating recipe:', error);
+            console.error('Ana kategori güncellenemedi:', error);
             throw error;
         }
     },
 
-    async deleteRecipe(recipeId) {
+    async deleteMainCategory(id) {
         try {
-            await deleteDoc(doc(db, 'recipes', recipeId));
+            await deleteDoc(doc(db, 'mainCategories', id));
             return true;
         } catch (error) {
-            console.error('Error deleting recipe:', error);
+            console.error('Ana kategori silinemedi:', error);
             throw error;
         }
     },
 
-    async getShipments() {
+    async getMainCategory(id) {
         try {
-            const snapshot = await getDocs(collection(db, 'shipments'));
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const docSnap = await getDoc(doc(db, 'mainCategories', id));
+            if (docSnap.exists()) {
+                return { id: docSnap.id, ...docSnap.data() };
+            }
+            return null;
         } catch (error) {
-            console.error('Error getting shipments:', error);
-            throw error;
+            console.error('Ana kategori alınamadı:', error);
+            return null;
         }
     },
 
-    async addShipment(shipmentData) {
+    // Sub Categories
+    async getSubCategories() {
         try {
-            const docRef = await addDoc(collection(db, 'shipments'), shipmentData);
+            const snapshot = await getDocs(collection(db, 'subCategories'));
+            return snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+        } catch (error) {
+            console.error('Alt kategoriler alınamadı:', error);
+            return [];
+        }
+    },
+
+    async addSubCategory(data) {
+        try {
+            const docRef = await addDoc(collection(db, 'subCategories'), data);
             return docRef.id;
         } catch (error) {
-            console.error('Error adding shipment:', error);
+            console.error('Alt kategori eklenemedi:', error);
             throw error;
         }
     },
 
-// firebase-config.js'e eklenecek
-// Notifications
-async getNotifications() {
+    async updateSubCategory(id, data) {
+        try {
+            await updateDoc(doc(db, 'subCategories', id), data);
+            return true;
+        } catch (error) {
+            console.error('Alt kategori güncellenemedi:', error);
+            throw error;
+        }
+    },
+
+    async deleteSubCategory(id) {
+        try {
+            await deleteDoc(doc(db, 'subCategories', id));
+            return true;
+        } catch (error) {
+            console.error('Alt kategori silinemedi:', error);
+            throw error;
+        }
+    },
+
+    async getSubCategory(id) {
+        try {
+            const docSnap = await getDoc(doc(db, 'subCategories', id));
+            if (docSnap.exists()) {
+                return { id: docSnap.id, ...docSnap.data() };
+            }
+            return null;
+        } catch (error) {
+            console.error('Alt kategori alınamadı:', error);
+            return null;
+        }
+    },
+
+    // Modal Fields
+    // firebase-config.js içinde:
+async getCategoryModalFields(categoryId) {
     try {
-        const snapshot = await getDocs(collection(db, 'notifications'));
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log('Modal alanları getiriliyor:', categoryId);
+        const docRef = doc(db, 'categoryModalFields', categoryId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const fields = data.fields || [];
+            
+            // optionsString'i geri options array'ına çevir
+            const processedFields = fields.map(field => {
+                if (field.optionsString) {
+                    field.options = field.optionsString.split(',').map(label => ({
+                        value: label.trim().toLowerCase().replace(/\s+/g, '_'),
+                        label: label.trim()
+                    }));
+                    delete field.optionsString;
+                }
+                return field;
+            });
+            
+            return processedFields;
+        } else {
+            console.log('Modal alanları bulunamadı, varsayılan alanlar döndürülüyor');
+            return getSimpleDefaultFields();
+        }
     } catch (error) {
-        console.error('Error getting notifications:', error);
+        console.error('Modal alanları getirme hatası:', error);
+        return getSimpleDefaultFields();
+    }
+}
+,
+
+   // firebase-config.js içinde bu fonksiyonu değiştir:
+async updateCategoryModalFields(categoryId, fields) {
+    try {
+        console.log('Modal alanları güncelleniyor:', categoryId, fields);
+        
+        // Nested array'ları temizle
+        const cleanFields = fields.map(field => {
+            const cleanField = { ...field };
+            // options array'ını basit stringe çevir
+            if (cleanField.options && Array.isArray(cleanField.options)) {
+                cleanField.optionsString = cleanField.options.map(opt => opt.label).join(',');
+                delete cleanField.options;
+            }
+            return cleanField;
+        });
+        
+        await setDoc(doc(db, 'categoryModalFields', categoryId), {
+            fields: cleanFields,
+            updatedAt: new Date().toISOString()
+        });
+        console.log('Modal alanları güncellendi');
+        return true;
+    } catch (error) {
+        console.error('Modal alanları güncelleme hatası:', error);
+        throw error;
+    }
+}
+    ,
+
+    // Stock Cards
+    async getStockCards() {
+        try {
+            const snapshot = await getDocs(collection(db, 'stockCards'));
+            return snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+        } catch (error) {
+            console.error('Stok kartları alınamadı:', error);
+            return [];
+        }
+    },
+
+    async addStockCard(data) {
+        try {
+            const docRef = await addDoc(collection(db, 'stockCards'), data);
+            return docRef.id;
+        } catch (error) {
+            console.error('Stok kartı eklenemedi:', error);
+            throw error;
+        }
+    },
+
+    async updateStockCard(id, data) {
+        try {
+            await updateDoc(doc(db, 'stockCards', id), data);
+            return true;
+        } catch (error) {
+            console.error('Stok kartı güncellenemedi:', error);
+            throw error;
+        }
+    },
+
+    async deleteStockCard(id) {
+        try {
+            await deleteDoc(doc(db, 'stockCards', id));
+            return true;
+        } catch (error) {
+            console.error('Stok kartı silinemedi:', error);
+            throw error;
+        }
+    },
+
+    async getStockCard(id) {
+        try {
+            const docSnap = await getDoc(doc(db, 'stockCards', id));
+            if (docSnap.exists()) {
+                return { id: docSnap.id, ...docSnap.data() };
+            }
+            return null;
+        } catch (error) {
+            console.error('Stok kartı alınamadı:', error);
+            return null;
+        }
+    },
+
+    // firebase-config.js içine eklenecek metodlar
+
+// Ana kategoriler için metodlar
+async getMainCategories() {
+    try {
+        const querySnapshot = await getDocs(collection(db, 'mainCategories'));
+        return querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+    } catch (error) {
+        console.error('Ana kategoriler alınamadı:', error);
         return [];
     }
 },
 
-async addNotification(notificationData) {
+async addMainCategory(data) {
     try {
-        const docRef = await addDoc(collection(db, 'notifications'), notificationData);
+        const docRef = await addDoc(collection(db, 'mainCategories'), data);
         return docRef.id;
     } catch (error) {
-        console.error('Error adding notification:', error);
+        console.error('Ana kategori eklenemedi:', error);
         throw error;
     }
 },
 
-async deleteProduction(productionId) {
+async updateMainCategory(id, data) {
     try {
-        await deleteDoc(doc(db, 'production', productionId));
+        await updateDoc(doc(db, 'mainCategories', id), data);
         return true;
     } catch (error) {
-        console.error('Error deleting production:', error);
-        throw error;
-    }
-}
-,
-// firebase-config.js'e eklenecek
-async updateNotification(notificationId, data) {
-    try {
-        await updateDoc(doc(db, 'notifications', notificationId), data);
-        return true;
-    } catch (error) {
-        console.error('Error updating notification:', error);
+        console.error('Ana kategori güncellenemedi:', error);
         throw error;
     }
 },
 
-async deleteNotification(notificationId) {
+async deleteMainCategory(id) {
     try {
-        await deleteDoc(doc(db, 'notifications', notificationId));
+        await deleteDoc(doc(db, 'mainCategories', id));
         return true;
     } catch (error) {
-        console.error('Error deleting notification:', error);
+        console.error('Ana kategori silinemedi:', error);
         throw error;
-    }
-}
-,
-
-
-async validatePassword(userId, password) {
-    try {
-        const user = await this.getUser(userId);
-        return user && user.password === password;
-    } catch (error) {
-        console.error('Password validation error:', error);
-        return false;
     }
 },
 
-async getUser(userId) {
+// Alt kategoriler için metodlar
+async getSubCategories() {
     try {
-        const docRef = doc(db, 'users', userId);
-        const docSnap = await getDoc(docRef);
+        const querySnapshot = await getDocs(collection(db, 'subCategories'));
+        return querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+    } catch (error) {
+        console.error('Alt kategoriler alınamadı:', error);
+        return [];
+    }
+},
+
+// Modal alanları için metodlar
+async getCategoryModalFields() {
+    try {
+        const querySnapshot = await getDocs(collection(db, 'categoryModalFields'));
+        const fields = {};
+        querySnapshot.docs.forEach(doc => {
+            fields[doc.id] = doc.data().fields || [];
+        });
+        return fields;
+    } catch (error) {
+        console.error('Modal alanları alınamadı:', error);
+        return {};
+    }
+},
+
+async updateCategoryModalFields(categoryId, fields) {
+    try {
+        await setDoc(doc(db, 'categoryModalFields', categoryId), {
+            fields: fields,
+            updatedAt: new Date().toISOString()
+        });
+        return true;
+    } catch (error) {
+        console.error('Modal alanları güncellenemedi:', error);
+        throw error;
+    }
+},
+
+// Stok kartları için metodlar
+async getStockCards() {
+    try {
+        const querySnapshot = await getDocs(collection(db, 'stockCards'));
+        return querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+    } catch (error) {
+        console.error('Stok kartları alınamadı:', error);
+        return [];
+    }
+},
+
+async addStockCard(data) {
+    try {
+        const docRef = await addDoc(collection(db, 'stockCards'), data);
+        // İlgili kategorinin itemCount'unu güncelle
+        if (data.mainCategoryId) {
+            const categoryRef = doc(db, 'mainCategories', data.mainCategoryId);
+            const categoryDoc = await getDoc(categoryRef);
+            if (categoryDoc.exists()) {
+                const currentCount = categoryDoc.data().itemCount || 0;
+                await updateDoc(categoryRef, {
+                    itemCount: currentCount + 1
+                });
+            }
+        }
+        return docRef.id;
+    } catch (error) {
+        console.error('Stok kartı eklenemedi:', error);
+        throw error;
+    }
+},
+
+async getStockCard(id) {
+    try {
+        const docSnap = await getDoc(doc(db, 'stockCards', id));
         if (docSnap.exists()) {
             return { id: docSnap.id, ...docSnap.data() };
         }
         return null;
     } catch (error) {
-        console.error('Error getting user:', error);
+        console.error('Stok kartı alınamadı:', error);
         return null;
     }
 },
 
+async updateStockCard(id, data) {
+    try {
+        await updateDoc(doc(db, 'stockCards', id), data);
+        return true;
+    } catch (error) {
+        console.error('Stok kartı güncellenemedi:', error);
+        throw error;
+    }
+},
 
+async deleteStockCard(id) {
+    try {
+        // Önce stok kartını al
+        const cardDoc = await getDoc(doc(db, 'stockCards', id));
+        if (cardDoc.exists()) {
+            const cardData = cardDoc.data();
+            // Stok kartını sil
+            await deleteDoc(doc(db, 'stockCards', id));
+            
+            // İlgili kategorinin itemCount'unu güncelle
+            if (cardData.mainCategoryId) {
+                const categoryRef = doc(db, 'mainCategories', cardData.mainCategoryId);
+                const categoryDoc = await getDoc(categoryRef);
+                if (categoryDoc.exists()) {
+                    const currentCount = categoryDoc.data().itemCount || 0;
+                    await updateDoc(categoryRef, {
+                        itemCount: Math.max(0, currentCount - 1)
+                    });
+                }
+            }
+        }
+        return true;
+    } catch (error) {
+        console.error('Stok kartı silinemedi:', error);
+        throw error;
+    }
+}
 
+,
 };
+// firebase-config.js veya stock-card.js'e ekle:
+function getSimpleDefaultFields() {
+    return [
+        { id: 'code', type: 'text', label: 'Ürün Kodu', required: true },
+        { id: 'name', type: 'text', label: 'Ürün Adı', required: true },
+        { id: 'brand', type: 'text', label: 'Marka', required: false },
+        { id: 'model', type: 'text', label: 'Model', required: false },
+        { id: 'unit', type: 'text', label: 'Birim', required: true },
+        { id: 'price', type: 'number', label: 'Birim Fiyat', required: false },
+        { id: 'description', type: 'textarea', label: 'Açıklama', required: false }
+    ];
+}
 
-
-
-
-// Export to global scope for script.js
-window.firestoreService = firestoreService;
+// window.firestoreService'e tüm fonksiyonları ekle
+window.firestoreService = {
+    ...firestoreService,
+    getMainCategories: firestoreService.getMainCategories,
+    addMainCategory: firestoreService.addMainCategory,
+    updateMainCategory: firestoreService.updateMainCategory,
+    deleteMainCategory: firestoreService.deleteMainCategory,
+    getMainCategory: firestoreService.getMainCategory,
+    getSubCategories: firestoreService.getSubCategories,
+    addSubCategory: firestoreService.addSubCategory,
+    updateSubCategory: firestoreService.updateSubCategory,
+    deleteSubCategory: firestoreService.deleteSubCategory,
+    getSubCategory: firestoreService.getSubCategory,
+    getCategoryModalFields: firestoreService.getCategoryModalFields,
+    updateCategoryModalFields: firestoreService.updateCategoryModalFields,
+    getStockCards: firestoreService.getStockCards,
+    addStockCard: firestoreService.addStockCard,
+    updateStockCard: firestoreService.updateStockCard,
+    deleteStockCard: firestoreService.deleteStockCard,
+    getStockCard: firestoreService.getStockCard
+};
 
 console.log('Database CDN yüklendi');

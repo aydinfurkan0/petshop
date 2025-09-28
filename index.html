@@ -7,6 +7,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="recipes.css">
 </head>
 <body>
     <!-- ===== FIREBASE LOADING INDICATOR ===== -->
@@ -78,6 +79,10 @@
     <div id="appContainer" class="app-container">
         <!-- NAVBAR -->
         <nav class="navbar">
+            <!-- Mobil Menü Butonu - HTML'de sabit -->
+<button class="mobile-menu-toggle" onclick="toggleMobileMenu(event)" aria-label="Menü">
+    <i class="fas fa-bars"></i>
+</button>
             <div class="navbar-brand">
                 <div class="icon">
                     <a href="https://furkatechyazilim.net"><img src="img/logo/furkatech300.svg" alt=""></a>
@@ -124,6 +129,8 @@
 
         <!-- APP LAYOUT -->
         <div class="app-layout">
+            <!-- Sidebar Overlay - HTML'de sabit -->
+<div class="sidebar-overlay" onclick="toggleMobileMenu(event)"></div>
             <!-- SIDEBAR -->
             <aside class="sidebar">
     <nav class="sidebar-menu">
@@ -133,7 +140,6 @@
                 <i class="fas fa-chart-line"></i>
                 <span>Ana Sayfa</span>
             </div>
-        </div>
 
         <div class="menu-section" id="salesSection">
             <div class="menu-section-title">Satış</div>
@@ -156,11 +162,22 @@
             <div class="menu-section-title">Ürün Yönetimi</div>
             <div class="menu-item" onclick="showPage('urunAgaci')">
                 <i class="fas fa-boxes"></i>
-                <span>Ürün Ağacı</span>
+                <span>Ürünler</span>
             </div>
             <div class="menu-item" onclick="showPage('urunReceteleri')">
                 <i class="fas fa-sitemap"></i>
                 <span>Ürün Reçeteleri</span>
+            </div>
+            <div class="menu-item" onclick="toggleSubmenu('stockSubmenu')">
+                <i class="fas fa-layer-group"></i>
+                <span>Stok Kart Yönetimi</span>
+                <i class="fas fa-chevron-right arrow"></i>
+            </div>
+            
+            <div id="stockSubmenu" class="submenu">
+                <div class="submenu-item" onclick="loadStockCards()">
+                    <span>Stok Kartları</span>
+                </div>
             </div>
         </div>
 
@@ -178,6 +195,7 @@
             </div>
         </div>
 
+          
         <div class="menu-section" id="operationSection">
             <div class="menu-section-title">Operasyon</div>
             <div class="menu-item" id="depoMenu" onclick="showPage('depo')">
@@ -203,27 +221,32 @@
             </div>
         </div>
 
-        <div class="menu-section" id="adminSection">
-            <div class="menu-section-title">Yönetim</div>
-            <div class="menu-item" onclick="showPage('admin')">
-                <i class="fas fa-shield-alt"></i>
-                <span>Admin Panel</span>
-            </div>
+        
+            <div class="menu-section" id="kullaniciSection">
+                <div class="menu-section-title">Kullanıcı Aktiviteleri</div>
             <div class="menu-item" onclick="showPage('kullaniciAktiviteleri')">
                 <i class="fas fa-user-clock"></i>
                 <span>Kullanıcı Aktiviteleri</span>
             </div>
-            
-        </div>
+            </div>
 
-            <div class="menu-section" id="HRSection">
+             <div class="menu-section" id="HRSection">
                 <div class="menu-section-title">İnsan Kaynakları</div>
-            <div class="menu-item" onclick="showPage('insanKaynaklari')">
+             <div class="menu-item" onclick="loadInsanKaynaklari()">
                     <i class="fas fa-users"></i>
                     <span>İnsan Kaynakları</span>
                 </div>
             </div>
+            <div class="menu-section" id="adminSection">
+            <div class="menu-section-title">Yönetim</div>
+            <div class="menu-item" onclick="loadAdmin()">
+                <i class="fas fa-shield-alt"></i>
+                <span>Admin Panel</span>
+            </div>
+            
+        </div>
 
+        
     </nav>
 </aside>    
 
@@ -588,6 +611,15 @@
     <!-- Ana script dosyası -->
     <script type="module" src="firebase-config.js"></script>
     <script type="module" src="script.js"></script>
+    <script type="module" src="stock-card.js"></script>
+    <script type="module" src="hr-script.js"></script>
+    <script type="module" src="stroage.js"></script>
+    <script type="module" src="admin.js"></script>
+    <script type="module" src="workorder.js"></script>
+    <script type="module" src="urun.js"></script>
+    <script type="module" src="recipes.js"></script>
+    
+   
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
     <!-- Bounce animasyonu için CSS -->
