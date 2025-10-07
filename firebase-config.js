@@ -905,6 +905,110 @@ async deleteStockCard(id) {
 }
 
 ,
+
+// ============================================
+// ÜRÜN BOYUTLARI YÖNETİMİ
+// ============================================
+
+// Tüm boyutları getir
+async getProductSizes() {
+    try {
+        const snapshot = await getDocs(collection(db, 'productSizes'));
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error('Boyutlar getirme hatası:', error);
+        return [];
+    }
+}
+,
+// Tek boyut getir
+async getProductSize(sizeId) {
+    try {
+        const docRef = doc(db, 'productSizes', sizeId);
+        const docSnap = await getDoc(docRef);
+        return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+    } catch (error) {
+        console.error('Boyut getirme hatası:', error);
+        return null;
+    }
+}
+,
+// Yeni boyut ekle
+async addProductSize(sizeData) {
+    try {
+        const docRef = await addDoc(collection(db, 'productSizes'), {
+            ...sizeData,
+            createdAt: new Date().toISOString()
+        });
+        return docRef.id;
+    } catch (error) {
+        console.error('Boyut ekleme hatası:', error);
+        throw error;
+    }
+}
+,
+// Boyut güncelle
+async updateProductSize(sizeId, sizeData) {
+    try {
+        const docRef = doc(db, 'productSizes', sizeId);
+        await updateDoc(docRef, {
+            ...sizeData,
+            updatedAt: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Boyut güncelleme hatası:', error);
+        throw error;
+    }
+},
+
+// Boyut sil
+async deleteProductSize(sizeId) {
+    try {
+        await deleteDoc(doc(db, 'productSizes', sizeId));
+    } catch (error) {
+        console.error('Boyut silme hatası:', error);
+        throw error;
+    }
+}
+,
+// ============================================
+// KATEGORİ BAZLI FİYATLANDIRMA
+// ============================================
+
+// Kategori fiyatlandırmasını kaydet
+async saveCategoryPricing(pricingData) {
+    try {
+        const docRef = doc(db, 'settings', 'categoryPricing');
+        await setDoc(docRef, {
+            pricing: pricingData,
+            updatedAt: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Kategori fiyatlandırma kaydetme hatası:', error);
+        throw error;
+    }
+}
+,
+// Kategori fiyatlandırmasını getir
+async getCategoryPricing(category = null) {
+    try {
+        const docRef = doc(db, 'settings', 'categoryPricing');
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (category) {
+                return data.pricing?.[category] || null;
+            }
+            return data.pricing || {};
+        }
+        return category ? null : {};
+    } catch (error) {
+        console.error('Kategori fiyatlandırma getirme hatası:', error);
+        return category ? null : {};
+    }
+}
+
 };
 // firebase-config.js veya stock-card.js'e ekle:
 function getSimpleDefaultFields() {
@@ -918,6 +1022,10 @@ function getSimpleDefaultFields() {
         { id: 'description', type: 'textarea', label: 'Açıklama', required: false }
     ];
 }
+
+
+
+
 
 // window.firestoreService'e tüm fonksiyonları ekle
 window.firestoreService = {

@@ -1052,7 +1052,7 @@ function loadTeklifHazirla() {
                             <div style="text-align: left; font-weight: 500; color: #6b7280;">Ara Toplam:</div>
                             <div id="offerSubtotal" style="font-weight: 600;">0 $</div>
                             
-                            <div style="text-align: left; font-weight: 500; color: #6b7280;">KDV (%18):</div>
+                            <div style="text-align: left; font-weight: 500; color: #6b7280;">KDV (%20):</div>
                             <div id="offerTax" style="font-weight: 600;">0 $</div>
                             
                             <div style="text-align: left; font-weight: 700; color: #1f2937; padding-top: 12px; border-top: 2px solid #e5e7eb;">Genel Toplam:</div>
@@ -1703,7 +1703,6 @@ function previewOffer() {
       if (productId && qty > 0) {
         const product = firebaseData.products.find((p) => p.id === productId);
         
-        // Teknik özellikler hazırla
         let technicalSpecs = [];
         if (product?.category) technicalSpecs.push(`Kategori: ${product.category}`);
         if (product?.code) technicalSpecs.push(`Kod: ${product.code}`);
@@ -1742,10 +1741,9 @@ function previewOffer() {
   }
 
   const subtotal = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
-  const tax = subtotal * 0.18; // KDV %18
+  const tax = subtotal * 0.18;
   const total = subtotal + tax;
 
-  // Şirket bilgileri
   const companyInfo = {
     name: "MOTTO ENGINEERING OF LIGHT",
     address: "Organize Sanayi Bölgesi 3. Cadde No:45",
@@ -1756,6 +1754,9 @@ function previewOffer() {
     taxNo: "123 456 789",
     logo: "img/logo/motto.png"
   };
+
+  // MÜŞTERİ LOGOSU EKLE
+  const customerLogo = company.logo || "";
 
   const offerNo = generateOfferNumber(companyId, projectName, false);
 
@@ -1793,10 +1794,17 @@ function previewOffer() {
                 </table>
             </div>
 
-            <!-- Client Information -->
+            <!-- Client Information WITH LOGO -->
             <div style="margin-bottom: 30px;">
                 <h3 style="background: #f8f9fa; padding: 10px; margin: 0 0 15px 0; font-size: 14px; color: #2563eb; font-weight: bold; border-left: 4px solid #2563eb;">SAYIN MÜŞTERİMİZ</h3>
                 <table style="width: 100%; font-size: 13px;">
+                    ${customerLogo ? `
+                    <tr>
+                        <td colspan="2" style="padding-bottom: 15px;">
+                            <img src="${customerLogo}" alt="${company.name} Logo" style="max-height: 50px; max-width: 200px;">
+                        </td>
+                    </tr>
+                    ` : ''}
                     <tr>
                         <td style="width: 25%; font-weight: bold; color: #555; padding: 5px 0;">Firma Adı:</td>
                         <td style="color: #333; padding: 5px 0;">${company.name}</td>
@@ -1890,7 +1898,7 @@ function previewOffer() {
                                     <td style="border: 1px solid #ddd; padding: 10px; text-align: right; font-weight: bold; font-size: 13px;">${subtotal.toFixed(2)} $</td>
                                 </tr>
                                 <tr style="background: #f8f9fa;">
-                                    <td style="border: 1px solid #ddd; padding: 10px; font-weight: bold; font-size: 13px;">KDV (%18)</td>
+                                    <td style="border: 1px solid #ddd; padding: 10px; font-weight: bold; font-size: 13px;">KDV (%20)</td>
                                     <td style="border: 1px solid #ddd; padding: 10px; text-align: right; font-weight: bold; font-size: 13px;">${tax.toFixed(2)} $</td>
                                 </tr>
                                 <tr style="background: #2563eb; color: white;">
@@ -1928,35 +1936,33 @@ function previewOffer() {
         </div>
     `;
 
-  // Modal oluştur
-  let modal = document.getElementById("offerPreviewModal");
-  if (!modal) {
-    const modalHTML = `
-      <div id="offerPreviewModal" class="modal">
-        <div class="modal-content" style="max-width: 95vw; max-height: 95vh; overflow-y: auto;">
-          <div class="modal-header" style="background: #2563eb; color: white;">
-            <h3 class="modal-title"><i class="fas fa-file-alt"></i> Teklif Önizleme</h3>
-            <button class="modal-close" onclick="closeModal('offerPreviewModal')" style="color: white;">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-          <div class="modal-body" id="offerPreviewBody" style="padding: 20px; background: #f8f9fa;"></div>
-          <div class="modal-footer">
-            <button class="btn btn-primary" onclick="printOffer()">
-              <i class="fas fa-print"></i> Yazdır
-            </button>
-            <button class="btn btn-outline" onclick="closeModal('offerPreviewModal')">Kapat</button>
-          </div>
+ let modal = document.getElementById("offerPreviewModal");
+if (!modal) {
+  const modalHTML = `
+    <div id="offerPreviewModal" class="modal">
+      <div class="modal-content" style="max-width: 95vw; max-height: 95vh; overflow-y: auto;">
+        <div class="modal-header" style="background: #2563eb; color: white;">
+          <h3 class="modal-title"><i class="fas fa-file-alt"></i> Teklif Önizleme - ${offer.offerNo || offer.no}</h3>
+          <button class="modal-close" onclick="closeModal('offerPreviewModal')" style="color: white;">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body" id="offerPreviewBody" style="padding: 20px; background: #f8f9fa;"></div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="printOffer()">
+            <i class="fas fa-print"></i> Yazdır
+          </button>
+          <button class="btn btn-outline" onclick="closeModal('offerPreviewModal')">Kapat</button>
         </div>
       </div>
-    `;
-    document.body.insertAdjacentHTML("beforeend", modalHTML);
-  }
-
-  document.getElementById("offerPreviewBody").innerHTML = previewHtml;
-  openModal("offerPreviewModal");
+    </div>
+  `;
+  document.body.insertAdjacentHTML("beforeend", modalHTML);
 }
 
+document.getElementById("offerPreviewBody").innerHTML = previewHtml;
+openModal("offerPreviewModal");
+}
 async function saveOfferWithRevisionCheck() {
     // Kaydet butonunu al ve devre dışı bırak
     const saveBtn = document.querySelector('.btn-success[onclick="saveOfferWithRevisionCheck()"]');
@@ -3379,7 +3385,7 @@ function calculateOfferTotal() {
     subtotal += total;
   });
 
-  const tax = subtotal * 0.18; // KDV %18
+  const tax = subtotal * 0.20; // KDV %20
   const total = subtotal + tax;
 
   const subtotalEl = document.getElementById("offerSubtotal");
@@ -4614,14 +4620,11 @@ function previewSavedOffer(offerId) {
     return;
   }
 
-  // Ürünleri hazırla
   const items = offer.products || [];
   
-  // Her ürün için teknik özellikler ekle
-  const enrichedItems = items.map((item, index) => {
+  const enrichedItems = items.map((item) => {
     const product = firebaseData.products.find((p) => p.id === item.productId);
     
-    // Teknik özellikler hazırla
     let technicalSpecs = [];
     if (product?.category) technicalSpecs.push(`Kategori: ${product.category}`);
     if (product?.code) technicalSpecs.push(`Kod: ${product.code}`);
@@ -4640,7 +4643,6 @@ function previewSavedOffer(offerId) {
   const tax = offer.tax || 0;
   const total = offer.total || 0;
 
-  // Şirket bilgileri
   const companyInfo = {
     name: "MOTTO ENGINEERING OF LIGHT",
     address: "Organize Sanayi Bölgesi 3. Cadde No:45",
@@ -4652,177 +4654,146 @@ function previewSavedOffer(offerId) {
     logo: "img/logo/motto.png"
   };
 
+  const customerLogo = company.logo || "";
+
   const previewHtml = `
-        <div style="max-width: 210mm; margin: 0 auto; background: white; font-family: 'Arial', sans-serif; color: #333; line-height: 1.4;">
-            
-            <!-- Letterhead -->
-            <div style="border-bottom: 3px solid #2563eb; margin-bottom: 30px; padding-bottom: 20px;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <td style="width: 40%; vertical-align: top;">
-                            <img src="${companyInfo.logo}" alt="Motto Logo" style="height: 60px; margin-bottom: 15px;">
-                            <h2 style="font-size: 18px; font-weight: bold; color: #1f2937; margin: 0 0 10px 0;">${companyInfo.name}</h2>
-                            <div style="font-size: 11px; color: #666; line-height: 1.6;">
-                                ${companyInfo.address}<br>
-                                ${companyInfo.city}<br>
-                                Tel: ${companyInfo.phone}<br>
-                                E-mail: ${companyInfo.email}<br>
-                                Web: ${companyInfo.website}<br>
-                                Vergi No: ${companyInfo.taxNo}
-                            </div>
-                        </td>
-                        <td style="width: 60%; text-align: right; vertical-align: top;">
-                            <div style="background: #2563eb; color: white; padding: 20px; display: inline-block; border-radius: 8px;">
-                                <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 15px 0;">TEKLİF</h1>
-                                <table style="color: white; font-size: 13px; line-height: 1.8;">
-                                    <tr><td style="padding: 2px 0; width: 120px;">Teklif No:</td><td style="font-weight: bold;">${offer.offerNo || offer.no}</td></tr>
-                                    <tr><td style="padding: 2px 0;">Teklif Tarihi:</td><td style="font-weight: bold;">${new Date(offer.date).toLocaleDateString("tr-TR")}</td></tr>
-                                    <tr><td style="padding: 2px 0;">Proje:</td><td style="font-weight: bold;">${offer.projectName || 'Belirtilmemiş'}</td></tr>
-                                    <tr><td style="padding: 2px 0;">Geçerlilik:</td><td style="font-weight: bold;">${offer.validity}</td></tr>
-                                    <tr><td style="padding: 2px 0;">Durum:</td><td style="font-weight: bold; color: ${offer.status === 'Onaylandı' ? '#4ade80' : offer.status === 'Beklemede' ? '#fbbf24' : '#f87171'};">${offer.status}</td></tr>
-                                </table>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-            </div>
+    <div id="printableOffer" style="max-width: 210mm; margin: 0 auto; background: white; font-family: 'Arial', sans-serif; color: #333; line-height: 1.4;">
+        
+        <!-- Header: Şirket ve Müşteri Bilgileri Yan Yana -->
+        <div style="border-bottom: 3px solid #2563eb; margin-bottom: 3px; padding-bottom: 20px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <!-- Sol: Bizim Şirket -->
+                    <td style="width: 50%; vertical-align: top; padding-right: 20px; border-right: 2px solid #e5e7eb;">
+                        <img src="${companyInfo.logo}" alt="Logo" style="height: 50px; margin-bottom: 12px;">
+                        <h2 style="font-size: 16px; font-weight: bold; color: #1f2937; margin: 0 0 8px 0;">${companyInfo.name}</h2>
+                        <div style="font-size: 10px; color: #666; line-height: 1.5;">
+                            ${companyInfo.address}<br>
+                            ${companyInfo.city}<br>
+                            ${companyInfo.phone}<br>
+                            ${companyInfo.email}<br>
+                            ${companyInfo.website}<br>
+                            Vergi No: ${companyInfo.taxNo}
+                        </div>
+                    </td>
+                    
+                    <!-- Sağ: Müşteri Bilgileri -->
+                    <td style="width: 50%; vertical-align: top; padding-left: 20px;">
+                      
+                        ${customerLogo ? `<img src="${customerLogo}" alt="${company.name}" style="max-height: 45px; max-width: 180px; margin-bottom: 10px;"><br>` : ''}
+                        <div style="font-size: 18px; font-weight:  margin-bottom: 6px;">${company.name}</div>
+                        <div style="font-size: 10px; color: #666; line-height: 1.5;">
+                            ${company.taxNo ? `Vergi No: ${company.taxNo}<br>` : ''}
+                            ${company.phone ? `${company.phone}<br>` : ''}
+                            ${company.email ? `${company.email}<br>` : ''}
+                            ${company.address ? `${company.address}<br>` : ''}
+                            ${company.website ? `${company.website}` : ''}
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
 
-            <!-- Client Information -->
-            <div style="margin-bottom: 30px;">
-                <h3 style="background: #f8f9fa; padding: 10px; margin: 0 0 15px 0; font-size: 14px; color: #2563eb; font-weight: bold; border-left: 4px solid #2563eb;">SAYIN MÜŞTERİMİZ</h3>
-                <table style="width: 100%; font-size: 13px;">
-                    <tr>
-                        <td style="width: 25%; font-weight: bold; color: #555; padding: 5px 0;">Firma Adı:</td>
-                        <td style="color: #333; padding: 5px 0;">${company.name}</td>
-                    </tr>
-                    ${offer.companyContact ? `
-                    <tr>
-                        <td style="font-weight: bold; color: #555; padding: 5px 0;">Yetkili Kişi:</td>
-                        <td style="color: #333; padding: 5px 0;">${offer.companyContact}</td>
-                    </tr>` : ''}
-                    <tr>
-                        <td style="font-weight: bold; color: #555; padding: 5px 0;">Vergi No:</td>
-                        <td style="color: #333; padding: 5px 0;">${company.taxNo}</td>
-                    </tr>
-                    ${company.phone ? `
-                    <tr>
-                        <td style="font-weight: bold; color: #555; padding: 5px 0;">Telefon:</td>
-                        <td style="color: #333; padding: 5px 0;">${company.phone}</td>
-                    </tr>` : ''}
-                    ${company.email ? `
-                    <tr>
-                        <td style="font-weight: bold; color: #555; padding: 5px 0;">E-posta:</td>
-                        <td style="color: #333; padding: 5px 0;">${company.email}</td>
-                    </tr>` : ''}
-                    ${company.address ? `
-                    <tr>
-                        <td style="font-weight: bold; color: #555; padding: 5px 0; vertical-align: top;">Adres:</td>
-                        <td style="color: #333; padding: 5px 0;">${company.address}</td>
-                    </tr>` : ''}
-                </table>
-            </div>
+        <!-- Teklif Bilgileri Tablosu (Kompakt) -->
+        <div style="margin-bottom: 25px;">
+            <table style="width: 100%; border-collapse: collapse; border: 2px solid #2563eb;">
+                <tr style="background: #2563eb; color: white;">
+                    <th style="padding: 8px; font-size: 11px; text-align: left; width: 25%;">TEKLİF NO</th>
+                    <th style="padding: 8px; font-size: 11px; text-align: left; width: 25%;">TEKLİF TARİHİ</th>
+                    <th style="padding: 8px; font-size: 11px; text-align: left; width: 25%;">PROJE ADI</th>
+                    <th style="padding: 8px; font-size: 11px; text-align: left; width: 25%;">GEÇERLİLİK</th>
+                </tr>
+                <tr style="background: #f8f9fa;">
+                    <td style="padding: 8px; font-size: 11px; font-weight: bold;">${offer.offerNo || offer.no}</td>
+                    <td style="padding: 8px; font-size: 11px; font-weight: bold;">${new Date(offer.date).toLocaleDateString("tr-TR")}</td>
+                    <td style="padding: 8px; font-size: 11px; font-weight: bold;">${offer.projectName || 'Belirtilmemiş'}</td>
+                    <td style="padding: 8px; font-size: 11px; font-weight: bold;">${offer.validity}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- Ürün Tablosu -->
+        <div style="margin-bottom: 30px;">
+            <h3 style="background: #f8f9fa; padding: 10px; margin: 0 0 15px 0; font-size: 14px; color: #2563eb; font-weight: bold; border-left: 4px solid #2563eb;">TEKLİF KALEMLERI</h3>
             
-            <!-- Products Table -->
-            <div style="margin-bottom: 30px;">
-                <h3 style="background: #f8f9fa; padding: 10px; margin: 0 0 15px 0; font-size: 14px; color: #2563eb; font-weight: bold; border-left: 4px solid #2563eb;">TEKLİF KALEMLERI</h3>
-                
-                <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
-                    <thead>
-                        <tr style="background: #f8f9fa;">
-                            <th style="border: 1px solid #ddd; padding: 12px 8px; text-align: center; font-size: 12px; font-weight: bold; color: #333;">S.NO</th>
-                            <th style="border: 1px solid #ddd; padding: 12px 8px; text-align: left; font-size: 12px; font-weight: bold; color: #333;">ÜRÜN ADI</th>
-                            <th style="border: 1px solid #ddd; padding: 12px 8px; text-align: left; font-size: 12px; font-weight: bold; color: #333;">TEKNİK ÖZELLİKLER</th>
-                            <th style="border: 1px solid #ddd; padding: 12px 8px; text-align: center; font-size: 12px; font-weight: bold; color: #333;">MİKTAR</th>
-                            <th style="border: 1px solid #ddd; padding: 12px 8px; text-align: center; font-size: 12px; font-weight: bold; color: #333;">BİRİM</th>
-                            <th style="border: 1px solid #ddd; padding: 12px 8px; text-align: right; font-size: 12px; font-weight: bold; color: #333;">BİRİM FİYAT</th>
-                            <th style="border: 1px solid #ddd; padding: 12px 8px; text-align: right; font-size: 12px; font-weight: bold; color: #333;">TOPLAM</th>
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
+                <thead>
+                    <tr style="background: #f8f9fa;">
+                        <th style="border: 1px solid #ddd; padding: 10px 6px; text-align: center; font-size: 11px; font-weight: bold; color: #333;">S.NO</th>
+                        <th style="border: 1px solid #ddd; padding: 10px 6px; text-align: left; font-size: 11px; font-weight: bold; color: #333;">ÜRÜN ADI</th>
+                        <th style="border: 1px solid #ddd; padding: 10px 6px; text-align: left; font-size: 11px; font-weight: bold; color: #333;">TEKNİK ÖZELLİKLER</th>
+                        <th style="border: 1px solid #ddd; padding: 10px 6px; text-align: center; font-size: 11px; font-weight: bold; color: #333;">MİKTAR</th>
+                        <th style="border: 1px solid #ddd; padding: 10px 6px; text-align: center; font-size: 11px; font-weight: bold; color: #333;">BİRİM</th>
+                        <th style="border: 1px solid #ddd; padding: 10px 6px; text-align: right; font-size: 11px; font-weight: bold; color: #333;">BİRİM FİYAT</th>
+                        <th style="border: 1px solid #ddd; padding: 10px 6px; text-align: right; font-size: 11px; font-weight: bold; color: #333;">TOPLAM</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${enrichedItems.map((item, index) => `
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px 6px; text-align: center; font-weight: bold; color: #2563eb; font-size: 11px;">${index + 1}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px 6px; font-size: 11px; font-weight: bold; color: #333;">${item.name}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px 6px; font-size: 10px; color: #666; line-height: 1.3;">${item.technicalSpecs}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px 6px; text-align: center; font-weight: bold; font-size: 11px;">${item.quantity}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px 6px; text-align: center; font-size: 10px; color: #666;">${item.unit}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px 6px; text-align: right; font-size: 11px; font-weight: bold;">${item.unitPrice.toFixed(2)} $</td>
+                            <td style="border: 1px solid #ddd; padding: 8px 6px; text-align: right; font-size: 11px; font-weight: bold; background: #f8f9fa;">${item.total.toFixed(2)} $</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        ${enrichedItems
-                          .map(
-                            (item, index) => `
-                            <tr>
-                                <td style="border: 1px solid #ddd; padding: 10px 8px; text-align: center; font-weight: bold; color: #2563eb;">
-                                    ${index + 1}
-                                </td>
-                                <td style="border: 1px solid #ddd; padding: 10px 8px; font-size: 13px; font-weight: bold; color: #333;">
-                                    ${item.name}
-                                </td>
-                                <td style="border: 1px solid #ddd; padding: 10px 8px; font-size: 11px; color: #666; line-height: 1.4;">
-                                    ${item.technicalSpecs}
-                                </td>
-                                <td style="border: 1px solid #ddd; padding: 10px 8px; text-align: center; font-weight: bold; font-size: 13px;">
-                                    ${item.quantity}
-                                </td>
-                                <td style="border: 1px solid #ddd; padding: 10px 8px; text-align: center; font-size: 12px; color: #666;">
-                                    ${item.unit}
-                                </td>
-                                <td style="border: 1px solid #ddd; padding: 10px 8px; text-align: right; font-size: 13px; font-weight: bold;">
-                                    ${item.unitPrice.toFixed(2)} $
-                                </td>
-                                <td style="border: 1px solid #ddd; padding: 10px 8px; text-align: right; font-size: 13px; font-weight: bold; background: #f8f9fa;">
-                                    ${item.total.toFixed(2)} $
-                                </td>
+                    `).join("")}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Toplam Bölümü -->
+        <div style="margin-bottom: 30px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="width: 60%;"></td>
+                    <td style="width: 40%;">
+                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
+                            <tr style="background: #f8f9fa;">
+                                <td style="border: 1px solid #ddd; padding: 10px; font-weight: bold; font-size: 13px;">ARA TOPLAM</td>
+                                <td style="border: 1px solid #ddd; padding: 10px; text-align: right; font-weight: bold; font-size: 13px;">${subtotal.toFixed(2)} $</td>
                             </tr>
-                        `
-                          )
-                          .join("")}
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Total Section -->
-            <div style="margin-bottom: 30px;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <td style="width: 60%;"></td>
-                        <td style="width: 40%;">
-                            <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
-                                <tr style="background: #f8f9fa;">
-                                    <td style="border: 1px solid #ddd; padding: 10px; font-weight: bold; font-size: 13px;">ARA TOPLAM</td>
-                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: right; font-weight: bold; font-size: 13px;">${subtotal.toFixed(2)} $</td>
-                                </tr>
-                                <tr style="background: #f8f9fa;">
-                                    <td style="border: 1px solid #ddd; padding: 10px; font-weight: bold; font-size: 13px;">KDV (%18)</td>
-                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: right; font-weight: bold; font-size: 13px;">${tax.toFixed(2)} $</td>
-                                </tr>
-                                <tr style="background: #2563eb; color: white;">
-                                    <td style="border: 1px solid #2563eb; padding: 15px; font-weight: bold; font-size: 14px;">GENEL TOPLAM</td>
-                                    <td style="border: 1px solid #2563eb; padding: 15px; text-align: right; font-weight: bold; font-size: 16px;">${total.toFixed(2)} $</td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            
-            <!-- Terms and Conditions -->
-            <div style="margin-bottom: 30px;">
-                <h3 style="background: #f8f9fa; padding: 10px; margin: 0 0 15px 0; font-size: 14px; color: #2563eb; font-weight: bold; border-left: 4px solid #2563eb;">GENEL ŞARTLAR</h3>
-                <div style="font-size: 11px; color: #555; line-height: 1.6;">
-                    <p style="margin: 8px 0;">• Bu teklif <strong>${offer.validity}</strong> süreyle geçerlidir.</p>
-                    <p style="margin: 8px 0;">• Teklif kabul edildiği takdirde sipariş onayı gönderilecektir.</p>
-                    <p style="margin: 8px 0;">• Fiyatlar KDV dahildir ve Dolar ($) cinsindendir.</p>
-                    <p style="margin: 8px 0;">• Teslimat süresi sipariş onayından sonra belirlenecektir.</p>
-                    <p style="margin: 8px 0;">• Ödeme şartları: Sipariş ile birlikte %50 peşin, teslimatta %50 kalan bakiye.</p>
-                    <p style="margin: 8px 0;">• Force majeure durumlarında teslimat süreleri uzayabilir.</p>
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <div style="text-align: center; padding-top: 20px; border-top: 1px solid #ddd;">
-                <div style="font-size: 10px; color: #888; margin-bottom: 10px;">
-                    Bu teklif ${new Date(offer.createdAt).toLocaleDateString('tr-TR')} tarihinde elektronik ortamda oluşturulmuştur.
-                </div>
-                <div style="font-size: 12px; font-weight: bold; color: #2563eb;">
-                    ${companyInfo.name} - ${companyInfo.phone} - ${companyInfo.email}
-                </div>
+                            <tr style="background: #f8f9fa;">
+                                <td style="border: 1px solid #ddd; padding: 10px; font-weight: bold; font-size: 13px;">KDV (%20)</td>
+                                <td style="border: 1px solid #ddd; padding: 10px; text-align: right; font-weight: bold; font-size: 13px;">${tax.toFixed(2)} $</td>
+                            </tr>
+                            <tr style="background: #2563eb; color: white;">
+                                <td style="border: 1px solid #2563eb; padding: 15px; font-weight: bold; font-size: 14px;">GENEL TOPLAM</td>
+                                <td style="border: 1px solid #2563eb; padding: 15px; text-align: right; font-weight: bold; font-size: 16px;">${total.toFixed(2)} $</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- Genel Şartlar -->
+        <div style="margin-bottom: 30px;">
+            <h3 style="background: #f8f9fa; padding: 10px; margin: 0 0 15px 0; font-size: 14px; color: #2563eb; font-weight: bold; border-left: 4px solid #2563eb;">GENEL ŞARTLAR</h3>
+            <div style="font-size: 11px; color: #555; line-height: 1.6;">
+                <p style="margin: 8px 0;">• Bu teklif <strong>${offer.validity}</strong> süreyle geçerlidir.</p>
+                <p style="margin: 8px 0;">• Teklif kabul edildiği takdirde sipariş onayı gönderilecektir.</p>
+                <p style="margin: 8px 0;">• Fiyatlar KDV dahildir ve Dolar ($) cinsindendir.</p>
+                <p style="margin: 8px 0;">• Teslimat süresi sipariş onayından sonra belirlenecektir.</p>
+                <p style="margin: 8px 0;">• Ödeme şartları: Sipariş ile birlikte %50 peşin, teslimatta %50 kalan bakiye.</p>
+                <p style="margin: 8px 0;">• Force majeure durumlarında teslimat süreleri uzayabilir.</p>
             </div>
         </div>
-    `;
 
-  // Modal oluştur
+        <!-- Footer -->
+        <div style="text-align: center; padding-top: 20px; border-top: 1px solid #ddd;">
+            <div style="font-size: 10px; color: #888; margin-bottom: 10px;">
+                Bu teklif ${new Date(offer.createdAt).toLocaleDateString('tr-TR')} tarihinde elektronik ortamda oluşturulmuştur.
+            </div>
+            <div style="font-size: 12px; font-weight: bold; color: #2563eb;">
+                ${companyInfo.name} - ${companyInfo.phone} - ${companyInfo.email}
+            </div>
+        </div>
+    </div>
+  `;
+
   let modal = document.getElementById("offerPreviewModal");
   if (!modal) {
     const modalHTML = `
@@ -8951,82 +8922,94 @@ window.saveProduct = window.saveProduct || function() {
 };
 
 // urun.js
-function addProduct() {
-  // Modal varsa kaldır
-  let existingModal = document.getElementById("productModal");
-  if (existingModal) {
-    existingModal.remove();
-  }
-
-  // Yeni modal oluştur
-  const modalHTML = `
-    <div id="productModal" class="modal show">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3 class="modal-title">Yeni Ürün Ekle</h3>
-          <button class="modal-close" onclick="closeModal('productModal')">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <form id="productForm">
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">Ürün Kodu</label>
-                <input type="text" class="form-control" id="productFormCode" value="PRD-${String(window.firebaseData.products.length + 1).padStart(4, '0')}" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Barkod</label>
-                <input type="text" class="form-control" id="productFormBarcode" placeholder="Barkod numarası">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Ürün Adı</label>
-                <input type="text" class="form-control" id="productFormName" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Kategori</label>
-                <select class="form-control" id="productFormCategory" required>
-                  <option value="">Tüm Kategoriler</option>
-                  <option>piksel kontrollü doğrusal armatürler</option>
-                  <option>piksel kontrollü noktasal armatürler</option>
-                  <option>Çizgisel armatürler</option>
-                  <option>Wallwasher armatürler</option>
-                  <option>Yere Gömme wallwasher armatürler</option>
-                  <option>Spot Armatürler</option>
-                  <option>Kontrol Sistemleri</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Birim Fiyat</label>
-                <input type="number" class="form-control" id="productFormPrice" required>
-              </div>
-              
+async function addProduct() {
+    // Önce boyutları yükle
+    const sizes = await window.firestoreService.getProductSizes() || [];
+    
+    if (sizes.length === 0) {
+        showNotification('Uyarı', 'Önce admin panelinden ürün boyutları tanımlamalısınız', 'warning');
+        return;
+    }
+    
+    const existingModal = document.getElementById("productModal");
+    if (existingModal) existingModal.remove();
+    
+    const modalHTML = `
+        <div id="productModal" class="modal show">
+            <div class="modal-content" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">Yeni Ürün Ekle</h3>
+                    <button class="modal-close" onclick="closeModal('productModal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="productForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Ürün Kodu</label>
+                                <input type="text" class="form-control" id="productFormCode" placeholder="URUN-001" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Barkod</label>
+                                <input type="text" class="form-control" id="productFormBarcode" placeholder="123456789">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Ürün Adı</label>
+                                <input type="text" class="form-control" id="productFormName" placeholder="Ürün adı" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Kategori</label>
+                                <select class="form-control" id="productFormCategory" onchange="updateSizePrice()" required>
+                                    <option value="">Kategori Seçin</option>
+                                    <option value="piksel kontrollü doğrusal armatürler">Piksel Kontrollü Doğrusal Armatürler</option>
+                                    <option value="piksel kontrollü noktasal armatürler">Piksel Kontrollü Noktasal Armatürler</option>
+                                    <option value="Çizgisel armatürler">Çizgisel Armatürler</option>
+                                    <option value="Wallwasher armatürler">Wallwasher Armatürler</option>
+                                    <option value="Yere Gömme wallwasher armatürler">Yere Gömme Wallwasher Armatürler</option>
+                                    <option value="Spot Armatürler">Spot Armatürler</option>
+                                    <option value="Kontrol Sistemleri">Kontrol Sistemleri</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Boyut</label>
+                                <select class="form-control" id="productFormSize" onchange="updateSizePrice()" required>
+                                    <option value="">Boyut Seçin</option>
+                                    ${sizes.filter(s => s.active !== false).map(size => `
+                                        <option value="${size.id}" data-price="${size.defaultPrice}">${size.name}</option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Birim Fiyat ($)</label>
+                                <input type="number" class="form-control" id="productFormPrice" placeholder="0.00" step="0.01" min="0" required>
+                                <small class="text-muted" id="priceHint">Boyut seçince otomatik dolacak (düzenlenebilir)</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Açıklama</label>
+                            <textarea class="form-control" id="productFormDescription" rows="3" placeholder="Ürün hakkında detaylı açıklama..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ürün Görseli</label>
+                            <input type="file" class="form-control" id="productFormImage" accept="image/*">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-success" onclick="saveProduct()">
+                        <i class="fas fa-save"></i> Kaydet
+                    </button>
+                    <button class="btn btn-outline" onclick="closeModal('productModal')">İptal</button>
+                </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Açıklama</label>
-              <textarea class="form-control" id="productFormDescription" rows="3"></textarea>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Ürün Görseli</label>
-              <input type="file" id="productFormImage" accept="image/*">
-            </div>
-          </form>
         </div>
-        <div class="modal-footer">
-          <button class="btn btn-success" onclick="window.saveProduct()">
-            <i class="fas fa-save"></i> Kaydet
-          </button>
-          <button class="btn btn-outline" onclick="closeModal('productModal')">İptal</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.body.insertAdjacentHTML("beforeend", modalHTML);
-  console.log("productModal yüklendi.");
+    `;
+    
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
 }
 
-// Global scope'a bağla
+
 window.addProduct = addProduct;
 // PRODUCTION KAYDET
 window.saveProductionDetail = async function() {
@@ -9092,7 +9075,6 @@ window.openModal = openModal;
 window.closeModal = closeModal;
 window.deleteProduct = deleteProduct;
 window.saveProduct = saveProduct;
-window.addProduct = addProduct;
 window.addCompany = addCompany;
 window.editCompany = editCompany;
 window.deleteCompany = deleteCompany;

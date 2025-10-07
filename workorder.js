@@ -1,7 +1,7 @@
 // ===========================================
 // workorder.JS - Üretim YÖNETİMİ
 // ============================================
-
+let rawMaterialSelections = {};
 function loadIsEmriVer() {
   const shipmentData = localStorage.getItem("shipmentToProduction");
   let fromShipment = null;
@@ -126,14 +126,16 @@ function loadIsEmriVer() {
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>Reçete</th>
-                                <th>Ürün</th>
+                                <th>Kategori</th>
+                                <th>Ürün Seçimi</th>
+                                <th>Ürün Adı</th>
                                 <th>Miktar</th>
                                 <th>Hammaddeler</th>
                                 <th>Stok Durumu</th>
                                 <th>İşlem</th>
                             </tr>
                         </thead>
+                        
                         <tbody id="jobOrderProducts">
                             ${
                               fromShipment && fromShipment.recipeId
@@ -363,43 +365,41 @@ function createJobOrderProductRow(product, recipe, quantity = 1) {
     `;
 }
 
-// İş emrine ürün ekle
 function addProductToJobOrder() {
-  const tbody = document.getElementById("jobOrderProducts");
-  const newRow = document.createElement("tr");
-
+  const tbody = document.getElementById('jobOrderProducts');
+  const newRow = document.createElement('tr');
+  const rowId = `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  const categories = [...new Set(firebaseData.products.map(p => p.category))].filter(Boolean);
+  
+  newRow.setAttribute('data-row-id', rowId);
   newRow.innerHTML = `
-        <td>
-            <select class="form-control recipe-select" onchange="updateProductFromRecipeAndDetails(this)">
-                <option value="">Reçete seçiniz...</option>
-                ${firebaseData.recipes
-                  .map((r) => {
-                    const product = firebaseData.products.find(
-                      (p) => p.id === r.productId
-                    );
-                    return `<option value="${r.id}" data-product="${
-                      r.productId
-                    }">${r.name} (${product?.name || "Bilinmeyen"})</option>`;
-                  })
-                  .join("")}
-            </select>
-        </td>
-        <td class="product-name">-</td>
-        <td>
-            <input type="number" class="form-control quantity-input" value="1" min="1" style="width: 80px;" onchange="updateRecipeDetails()">
-        </td>
-        <td class="raw-materials" style="font-size: 12px;">-</td>
-        <td><span class="badge warning">Bekliyor</span></td>
-        <td>
-            <button class="btn btn-sm btn-danger" onclick="this.parentElement.parentElement.remove(); updateRecipeDetails()">
-                <i class="fas fa-trash"></i>
-            </button>
-        </td>
-    `;
-
+    <td>
+      <select class="form-control category-select" onchange="loadProductsByCategory(this, '${rowId}')">
+        <option value="">Kategori seçiniz...</option>
+        ${categories.map(cat => `<option value="${cat}">${cat}</option>`).join('')}
+      </select>
+    </td>
+    <td>
+      <select class="form-control product-select" disabled onchange="updateProductSelection(this, '${rowId}')">
+        <option value="">Önce kategori seçin...</option>
+      </select>
+    </td>
+    <td class="product-name">-</td>
+    <td>
+      <input type="number" class="form-control quantity-input" value="1" min="1" style="width: 80px;" onchange="updateRecipeDetails()">
+    </td>
+    <td class="raw-materials-cell">-</td>
+    <td><span class="badge warning">Bekliyor</span></td>
+    <td>
+      <button class="btn btn-sm btn-danger" onclick="removeProductRow('${rowId}')">
+        <i class="fas fa-trash"></i>
+      </button>
+    </td>
+  `;
+  
   tbody.appendChild(newRow);
 }
-
 // Reçete seçimine göre ürünü güncelle
 function updateProductFromRecipeAndDetails(select) {
   const recipeId = select.value;
@@ -482,21 +482,20 @@ function updateProductFromRecipeAndDetails(select) {
   updateRecipeDetails();
 }
 
-// Reçete detaylarını güncelle
 function updateRecipeDetails() {
-  const tbody = document.getElementById("jobOrderProducts");
-  const rows = tbody.querySelectorAll("tr");
-  const detailsDiv = document.getElementById("recipeDetailsPreview");
-  const summaryDiv = document.getElementById("productionSummary");
-  const contentDiv = document.getElementById("recipeDetailsContent");
-  const summaryContent = document.getElementById("productionSummaryContent");
-  const warningDiv = document.getElementById("stockWarning");
-  const warningContent = document.getElementById("stockWarningContent");
+  const tbody = document.getElementById('jobOrderProducts');
+  const rows = tbody.querySelectorAll('tr');
+  const detailsDiv = document.getElementById('recipeDetailsPreview');
+  const summaryDiv = document.getElementById('productionSummary');
+  const contentDiv = document.getElementById('recipeDetailsContent');
+  const summaryContent = document.getElementById('productionSummaryContent');
+  const warningDiv = document.getElementById('stockWarning');
+  const warningContent = document.getElementById('stockWarningContent');
 
   if (rows.length === 0) {
-    detailsDiv.style.display = "none";
-    summaryDiv.style.display = "none";
-    warningDiv.style.display = "none";
+    detailsDiv.style.display = 'none';
+    summaryDiv.style.display = 'none';
+    warningDiv.style.display = 'none';
     return;
   }
 
@@ -505,288 +504,243 @@ function updateRecipeDetails() {
   let hasStockIssue = false;
   let stockIssues = [];
 
-  rows.forEach((row) => {
-    const recipeId = row.querySelector(".recipe-select").value;
-    const quantity = parseInt(row.querySelector(".quantity-input").value) || 0;
-    const productName = row.querySelector(".product-name").textContent;
+  rows.forEach(row => {
+    const rowId = row.getAttribute('data-row-id');
+    const productId = row.getAttribute('data-product-id');
+    const quantity = parseInt(row.querySelector('.quantity-input').value) || 0;
+    const productName = row.querySelector('.product-name').textContent;
 
-    if (recipeId && quantity > 0) {
-      const recipe = firebaseData.recipes.find((r) => r.id === recipeId);
+    if (productId && quantity > 0 && rawMaterialSelections[rowId]) {
+      const product = firebaseData.products.find(p => p.id === productId);
+      const selection = rawMaterialSelections[rowId];
+      const allMaterials = [...selection.mainMaterials, ...selection.subMaterials];
+
       productsList.push({
         name: productName,
         quantity: quantity,
-        recipe: recipe?.name || "Reçetesiz",
+        materialCount: allMaterials.length
       });
 
-      if (recipe?.rawMaterials) {
-        recipe.rawMaterials.forEach((rmId) => {
-          const rm = firebaseData.stock.find((s) => s.id === rmId);
-          if (rm) {
-            if (!totalRawMaterials[rmId]) {
-              totalRawMaterials[rmId] = {
-                name: rm.name,
-                unit: rm.unit,
-                required: 0,
-                available: rm.quantity,
-                minStock: rm.minStock,
-              };
-            }
-            totalRawMaterials[rmId].required +=
-              quantity * (recipe.quantityPerUnit || 1);
+      allMaterials.forEach(mat => {
+        const rm = firebaseData.stock.find(s => s.id === mat.id);
+        if (rm) {
+          const needed = quantity * mat.quantity;
+          if (!totalRawMaterials[mat.id]) {
+            totalRawMaterials[mat.id] = {
+              name: rm.name,
+              unit: rm.unit,
+              required: 0,
+              available: rm.quantity,
+              type: rm.type || 'Ana Mamül'
+            };
           }
-        });
-      }
+          totalRawMaterials[mat.id].required += needed;
+        }
+      });
     }
   });
 
   Object.entries(totalRawMaterials).forEach(([rmId, rm]) => {
     if (rm.available < rm.required) {
       hasStockIssue = true;
-      stockIssues.push(
-        `${rm.name}: ${rm.required - rm.available} ${rm.unit} eksik`
-      );
+      stockIssues.push(`${rm.name}: ${rm.required - rm.available} ${rm.unit} eksik`);
     }
   });
 
   if (Object.keys(totalRawMaterials).length > 0) {
-    detailsDiv.style.display = "block";
+    detailsDiv.style.display = 'block';
     contentDiv.innerHTML = `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div>
-                    <h5 style="margin-bottom: 15px; color: var(--primary);">
-                        <i class="fas fa-cubes"></i> Toplam Hammadde İhtiyacı
-                    </h5>
-                    <table class="table" style="font-size: 14px;">
-                        <thead>
-                            <tr style="background: white;">
-                                <th>Hammadde</th>
-                                <th>Gerekli</th>
-                                <th>Mevcut</th>
-                                <th>Durum</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${Object.values(totalRawMaterials)
-                              .map((rm) => {
-                                const sufficient = rm.available >= rm.required;
-                                const percentage = Math.round(
-                                  (rm.available / rm.required) * 100
-                                );
-                                return `
-                                    <tr>
-                                        <td><strong>${rm.name}</strong></td>
-                                        <td>${rm.required} ${rm.unit}</td>
-                                        <td>${rm.available} ${rm.unit}</td>
-                                        <td>
-                                            ${
-                                              sufficient
-                                                ? `<span class="badge success"><i class="fas fa-check"></i> Yeterli</span>`
-                                                : `<span class="badge danger"><i class="fas fa-times"></i> ${
-                                                    rm.required - rm.available
-                                                  } ${rm.unit} Eksik</span>`
-                                            }
-                                            <div style="width: 100%; height: 4px; background: #e5e7eb; border-radius: 2px; margin-top: 5px;">
-                                                <div style="width: ${Math.min(
-                                                  percentage,
-                                                  100
-                                                )}%; height: 100%; background: ${
-                                  sufficient ? "#10b981" : "#ef4444"
-                                }; border-radius: 2px;"></div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                `;
-                              })
-                              .join("")}
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div>
-                    <h5 style="margin-bottom: 15px; color: var(--success);">
-                        <i class="fas fa-clipboard-list"></i> Üretim Listesi
-                    </h5>
-                    <div style="background: white; padding: 15px; border-radius: 8px;">
-                        ${productsList
-                          .map(
-                            (p) => `
-                            <div style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                                <strong>${p.quantity} adet</strong> ${p.name}
-                                <br>
-                                <small style="color: #6b7280;">Reçete: ${p.recipe}</small>
-                            </div>
-                        `
-                          )
-                          .join("")}
-                        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e5e7eb;">
-                            <strong>Toplam: ${productsList.reduce(
-                              (sum, p) => sum + p.quantity,
-                              0
-                            )} ürün</strong>
-                        </div>
-                    </div>
-                </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div>
+          <h5 style="margin-bottom: 15px; color: var(--primary); font-size: 1.1rem;">
+            <i class="fas fa-cubes"></i> Toplam Hammadde İhtiyacı
+          </h5>
+          <table class="table" style="font-size: 0.9rem;">
+            <thead>
+              <tr style="background: white;">
+                <th>Hammadde</th>
+                <th>Tip</th>
+                <th>Gerekli</th>
+                <th>Mevcut</th>
+                <th>Durum</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Object.values(totalRawMaterials).map(rm => {
+                const sufficient = rm.available >= rm.required;
+                const percentage = Math.round((rm.available / rm.required) * 100);
+                return `
+                  <tr>
+                    <td><strong>${rm.name}</strong></td>
+                    <td><span class="badge ${rm.type === 'Yan Mamül' ? 'info' : 'primary'}" style="font-size: 0.8rem;">${rm.type}</span></td>
+                    <td>${rm.required} ${rm.unit}</td>
+                    <td>${rm.available} ${rm.unit}</td>
+                    <td>
+                      ${sufficient 
+                        ? `<span class="badge success"><i class="fas fa-check"></i> Yeterli</span>`
+                        : `<span class="badge danger"><i class="fas fa-times"></i> ${rm.required - rm.available} ${rm.unit} Eksik</span>`
+                      }
+                      <div style="width: 100%; height: 4px; background: #e5e7eb; border-radius: 2px; margin-top: 5px;">
+                        <div style="width: ${Math.min(percentage, 100)}%; height: 100%; background: ${sufficient ? '#10b981' : '#ef4444'}; border-radius: 2px;"></div>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        
+        <div>
+          <h5 style="margin-bottom: 15px; color: var(--success); font-size: 1.1rem;">
+            <i class="fas fa-clipboard-list"></i> Üretim Listesi
+          </h5>
+          <div style="background: white; padding: 15px; border-radius: 8px;">
+            ${productsList.map(p => `
+              <div style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                <strong>${p.quantity} adet</strong> ${p.name}
+                <br>
+                <small style="color: #6b7280; font-size: 0.85rem;">${p.materialCount} hammadde</small>
+              </div>
+            `).join('')}
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e5e7eb;">
+              <strong>Toplam: ${productsList.reduce((sum, p) => sum + p.quantity, 0)} ürün</strong>
             </div>
-        `;
+          </div>
+        </div>
+      </div>
+    `;
 
-    summaryDiv.style.display = "block";
+    summaryDiv.style.display = 'block';
     summaryContent.innerHTML = `
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                <div style="text-align: center; padding: 15px; background: var(--gray-50); border-radius: 8px;">
-                    <div style="font-size: 24px; font-weight: bold; color: var(--primary);">${
-                      productsList.length
-                    }</div>
-                    <div style="font-size: 12px; color: var(--gray-600);">Farklı Ürün</div>
-                </div>
-                <div style="text-align: center; padding: 15px; background: var(--gray-50); border-radius: 8px;">
-                    <div style="font-size: 24px; font-weight: bold; color: var(--success);">${productsList.reduce(
-                      (sum, p) => sum + p.quantity,
-                      0
-                    )}</div>
-                    <div style="font-size: 12px; color: var(--gray-600);">Toplam Adet</div>
-                </div>
-                <div style="text-align: center; padding: 15px; background: var(--gray-50); border-radius: 8px;">
-                    <div style="font-size: 24px; font-weight: bold; color: var(--warning);">${
-                      Object.keys(totalRawMaterials).length
-                    }</div>
-                    <div style="font-size: 12px; color: var(--gray-600);">Hammadde Çeşidi</div>
-                </div>
-                <div style="text-align: center; padding: 15px; background: var(--gray-50); border-radius: 8px;">
-                    <div style="font-size: 24px; font-weight: bold; color: ${
-                      hasStockIssue ? "var(--danger)" : "var(--success)"
-                    };">
-                        ${
-                          hasStockIssue
-                            ? '<i class="fas fa-exclamation-triangle"></i>'
-                            : '<i class="fas fa-check-circle"></i>'
-                        }
-                    </div>
-                    <div style="font-size: 12px; color: var(--gray-600);">Stok Durumu</div>
-                </div>
-            </div>
-        `;
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        <div style="text-align: center; padding: 15px; background: var(--gray-50); border-radius: 8px;">
+          <div style="font-size: 1.5rem; font-weight: bold; color: var(--primary);">${productsList.length}</div>
+          <div style="font-size: 0.85rem; color: var(--gray-600);">Farklı Ürün</div>
+        </div>
+        <div style="text-align: center; padding: 15px; background: var(--gray-50); border-radius: 8px;">
+          <div style="font-size: 1.5rem; font-weight: bold; color: var(--success);">${productsList.reduce((sum, p) => sum + p.quantity, 0)}</div>
+          <div style="font-size: 0.85rem; color: var(--gray-600);">Toplam Adet</div>
+        </div>
+        <div style="text-align: center; padding: 15px; background: var(--gray-50); border-radius: 8px;">
+          <div style="font-size: 1.5rem; font-weight: bold; color: var(--warning);">${Object.keys(totalRawMaterials).length}</div>
+          <div style="font-size: 0.85rem; color: var(--gray-600);">Hammadde Çeşidi</div>
+        </div>
+        <div style="text-align: center; padding: 15px; background: var(--gray-50); border-radius: 8px;">
+          <div style="font-size: 1.5rem; font-weight: bold; color: ${hasStockIssue ? 'var(--danger)' : 'var(--success)'};">
+            ${hasStockIssue ? '<i class="fas fa-exclamation-triangle"></i>' : '<i class="fas fa-check-circle"></i>'}
+          </div>
+          <div style="font-size: 0.85rem; color: var(--gray-600);">Stok Durumu</div>
+        </div>
+      </div>
+    `;
 
     if (hasStockIssue) {
-      warningDiv.style.display = "block";
+      warningDiv.style.display = 'block';
       warningContent.innerHTML = `
-                <ul style="margin: 0; padding-left: 20px;">
-                    ${stockIssues.map((issue) => `<li>${issue}</li>`).join("")}
-                </ul>
-                <div style="margin-top: 10px; font-size: 14px;">
-                    <strong>Not:</strong> Eksik hammaddeler için satın alma talebi oluşturmanız gerekmektedir.
-                </div>
-            `;
+        <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem;">
+          ${stockIssues.map(issue => `<li>${issue}</li>`).join('')}
+        </ul>
+        <div style="margin-top: 10px; font-size: 0.9rem;">
+          <strong>Not:</strong> Eksik hammaddeler için satın alma talebi oluşturmanız gerekmektedir.
+        </div>
+      `;
     } else {
-      warningDiv.style.display = "none";
+      warningDiv.style.display = 'none';
     }
   } else {
-    detailsDiv.style.display = "none";
-    summaryDiv.style.display = "none";
-    warningDiv.style.display = "none";
+    detailsDiv.style.display = 'none';
+    summaryDiv.style.display = 'none';
+    warningDiv.style.display = 'none';
   }
 }
 
-// workorder.js - Üretim Yönetimi Modülü (devam)
-
-// Tek iş emri oluştur
 async function createSingleJobOrder() {
-  const companyId = document.getElementById("jobCompany").value;
-  const startDate = document.getElementById("jobStartDate").value;
-  const deadline = document.getElementById("jobDeadline").value;
-  const priority = document.getElementById("jobPriority").value;
-  const notes = document.getElementById("jobNotes").value;
+  const companyId = document.getElementById('jobCompany').value;
+  const startDate = document.getElementById('jobStartDate').value;
+  const deadline = document.getElementById('jobDeadline').value;
+  const priority = document.getElementById('jobPriority').value;
+  const notes = document.getElementById('jobNotes').value;
 
-  const tbody = document.getElementById("jobOrderProducts");
-  const rows = tbody.querySelectorAll("tr");
+  const tbody = document.getElementById('jobOrderProducts');
+  const rows = tbody.querySelectorAll('tr');
 
   if (rows.length === 0) {
-    showNotification("Hata", "Lütfen en az bir ürün ekleyin.", "error");
+    showNotification('Hata', 'Lütfen en az bir ürün ekleyin.', 'error');
     return;
   }
 
   const products = [];
   let hasError = false;
 
-  rows.forEach((row) => {
-    const recipeSelect = row.querySelector(".recipe-select");
-    const quantityInput = row.querySelector(".quantity-input");
+  rows.forEach(row => {
+    const rowId = row.getAttribute('data-row-id');
+    const productId = row.getAttribute('data-product-id');
+    const quantityInput = row.querySelector('.quantity-input');
 
-    if (!recipeSelect || !recipeSelect.value) {
-      showNotification(
-        "Hata",
-        "Tüm ürünler için reçete seçilmelidir.",
-        "error"
-      );
+    if (!productId || !rawMaterialSelections[rowId]) {
+      showNotification('Hata', 'Tüm ürünler için kategori, ürün ve hammadde seçilmelidir.', 'error');
       hasError = true;
       return;
     }
 
-    const recipeId = recipeSelect.value;
     const quantity = parseInt(quantityInput.value) || 1;
-    const recipe = firebaseData.recipes.find((r) => r.id === recipeId);
-    const product = firebaseData.products.find(
-      (p) => p.id === recipe?.productId
-    );
+    const product = firebaseData.products.find(p => p.id === productId);
+    const selection = rawMaterialSelections[rowId];
 
     if (!product) {
-      showNotification("Hata", "Ürün bilgisi bulunamadı.", "error");
+      showNotification('Hata', 'Ürün bilgisi bulunamadı.', 'error');
       hasError = true;
       return;
     }
 
     products.push({
-      recipeId: recipeId,
-      productId: recipe.productId,
+      productId: productId,
       productName: product.name,
       quantity: quantity,
-      rawMaterials: recipe.rawMaterials || [],
+      rawMaterials: [...selection.mainMaterials, ...selection.subMaterials],
+      mainMaterials: selection.mainMaterials,
+      subMaterials: selection.subMaterials
     });
   });
 
   if (hasError) return;
 
-  const orderNo = `URT-${new Date().getFullYear()}-${String(
-    firebaseData.production.length + 1
-  ).padStart(3, "0")}`;
+  const orderNo = `URT-${new Date().getFullYear()}-${String(firebaseData.production.length + 1).padStart(3, '0')}`;
 
-  // Tek bir üretim emri oluştur
   const jobOrder = {
     orderNo: orderNo,
     companyId: companyId,
     products: products,
     product: products[0].productName,
     productId: products[0].productId,
-    recipeId: products[0].recipeId,
     quantity: products[0].quantity,
     priority: priority,
-    status: "Beklemede",
-    currentDepartment: "Depo/Stok",
-    departments: ["Depo/Stok", "Dizgi", "İmalat/Montaj"],
+    status: 'Beklemede',
+    currentDepartment: 'Depo/Stok',
+    departments: ['Depo/Stok', 'Dizgi', 'İmalat/Montaj'],
     progress: 0,
     startDate: startDate,
     deadline: deadline,
     notes: notes,
-    completedDate: "",
+    completedDate: '',
     active: true,
     approvals: [],
     workTimeRecords: [],
     shipmentStatus: null,
     createdAt: new Date().toISOString(),
-    createdBy: currentUser.id,
+    createdBy: currentUser.id
   };
 
   try {
     await window.firestoreService.addProduction(jobOrder);
-    showNotification(
-      "Başarılı",
-      `${orderNo} numaralı iş emri oluşturuldu.`,
-      "success"
-    );
+    showNotification('Başarılı', `${orderNo} numaralı iş emri oluşturuldu.`, 'success');
     await loadFirebaseData();
-    showPage("uretimListesi");
+    rawMaterialSelections = {};
+    showPage('uretimListesi');
   } catch (error) {
-    console.error("İş emri oluşturma hatası:", error);
-    showNotification("Hata", "İş emri oluşturulurken hata oluştu.", "error");
+    console.error('İş emri oluşturma hatası:', error);
+    showNotification('Hata', 'İş emri oluşturulurken hata oluştu.', 'error');
   }
 }
 
@@ -2835,6 +2789,328 @@ function addProductionItem() {
         </td>
     `;
 }
+
+
+
+
+
+function loadProductsByCategory(categorySelect, rowId) {
+  const category = categorySelect.value;
+  const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
+  const productSelect = row.querySelector('.product-select');
+  const productNameCell = row.querySelector('.product-name');
+  const rawMaterialCell = row.querySelector('.raw-materials-cell');
+  
+  if (!category) {
+    productSelect.disabled = true;
+    productSelect.innerHTML = '<option value="">Önce kategori seçin...</option>';
+    productNameCell.textContent = '-';
+    rawMaterialCell.innerHTML = '-';
+    updateRecipeDetails();
+    return;
+  }
+  
+  const categoryProducts = firebaseData.products.filter(p => p.category === category);
+  
+  productSelect.disabled = false;
+  productSelect.innerHTML = `
+    <option value="">Ürün seçiniz...</option>
+    ${categoryProducts.map(p => `
+      <option value="${p.id}">${p.name} - ${p.code}</option>
+    `).join('')}
+  `;
+  
+  productNameCell.textContent = '-';
+  rawMaterialCell.innerHTML = '-';
+  updateRecipeDetails();
+}
+
+function updateProductSelection(productSelect, rowId) {
+  const productId = productSelect.value;
+  const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
+  const productNameCell = row.querySelector('.product-name');
+  const rawMaterialCell = row.querySelector('.raw-materials-cell');
+  
+  if (!productId) {
+    productNameCell.textContent = '-';
+    rawMaterialCell.innerHTML = '-';
+    row.setAttribute('data-product-id', '');
+    delete rawMaterialSelections[rowId]; // Seçimleri temizle
+    updateRecipeDetails();
+    return;
+  }
+  
+  const product = firebaseData.products.find(p => p.id === productId);
+  
+  if (!product) {
+    showNotification('Hata', 'Ürün bulunamadı.', 'error');
+    return;
+  }
+  
+  row.setAttribute('data-product-id', productId);
+  productNameCell.textContent = product.name;
+  
+  // rawMaterialSelections'ı başlat, şimdi array of objects: [{id: string, quantity: number}]
+  rawMaterialSelections[rowId] = rawMaterialSelections[rowId] || {
+    productId: productId,
+    mainMaterials: [],
+    subMaterials: []
+  };
+  
+  const mainCount = rawMaterialSelections[rowId].mainMaterials.length;
+  const subCount = rawMaterialSelections[rowId].subMaterials.length;
+  const totalCount = mainCount + subCount;
+  
+  rawMaterialCell.innerHTML = `
+    <button class="btn btn-sm btn-info" onclick="openRawMaterialModal('${rowId}', '${productId}')">
+      <i class="fas fa-flask"></i> Hammadde Seç
+    </button>
+    <div class="selected-raw-materials" style="font-size: 11px; margin-top: 5px; color: #666;">
+      ${totalCount} hammadde seçili (Ana: ${mainCount}, Yan: ${subCount})
+    </div>
+  `;
+  
+  updateRecipeDetails();
+}
+
+// Global searchMaterials fonksiyonu
+function searchMaterials(type) {
+  const container = document.getElementById(`${type}MaterialsContainer`);
+  const searchInput = document.getElementById(`${type}MaterialSearch`);
+  const query = searchInput.value.toLowerCase();
+  const items = container.querySelectorAll('.material-item');
+  
+  items.forEach(item => {
+    const name = item.dataset.name;
+    const code = item.dataset.code;
+    item.style.display = (query === '' || name.includes(query) || code.includes(query)) ? '' : 'none';
+  });
+}
+
+function openRawMaterialModal(rowId, productId) {
+  const product = firebaseData.products.find(p => p.id === productId);
+  
+  if (!product) {
+    showNotification('Hata', 'Ürün bulunamadı.', 'error');
+    return;
+  }
+  
+  rawMaterialSelections[rowId] = rawMaterialSelections[rowId] || {
+    productId: productId,
+    mainMaterials: [],
+    subMaterials: []
+  };
+  
+  const currentSelection = rawMaterialSelections[rowId];
+  
+  const mainMaterials = firebaseData.stock.filter(s => s.type === 'ana_mamul' || !s.type);
+  const subMaterials = firebaseData.stock.filter(s => s.type === 'yan_mamul');
+  
+  const getQuantity = (selections, id) => {
+    const item = selections.find(sel => sel.id === id);
+    return item ? item.quantity : 1;
+  };
+  
+  const modalHTML = `
+    <div id="rawMaterialModal" class="modal show" style="z-index: 10002;">
+      <div class="modal-content" style="max-width: 1400px; max-height: 98vh; overflow-y: auto; font-size: 0.85rem; box-shadow: 0 6px 24px rgba(0,0,0,0.15); border: 1px solid #d1d5db; background: #ffffff;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 20px; border-bottom: 1px solid #e5e7eb;">
+          <h3 class="modal-title" style="font-size: 1.25rem; margin: 0; font-weight: 600;">Hammadde Seçimi - ${product.name}</h3>
+          <button class="modal-close" onclick="closeModal('rawMaterialModal')" style="color: white; background: none; border: none; font-size: 1.1rem;">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body" style="padding: 25px;">
+          <input type="hidden" id="currentRowId" value="${rowId}">
+          
+          <div class="alert alert-info" style="margin-bottom: 20px; font-size: 0.8rem; background: #eff6ff; border-color: #bfdbfe; color: #1e40af;">
+            <i class="fas fa-info-circle"></i> 
+            Ana mamül ve yan mamül seçimlerini yapın. Her hammaddenin kullanım miktarını belirtin. Arama ile hızlıca bulun.
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="color: #1e40af; font-size: 1.05rem;">
+                  <i class="fas fa-boxes"></i> Ana Mamül (Toplam: ${mainMaterials.length})
+                </h4>
+                <div class="search-box" style="display: flex; align-items: center; width: 300px;">
+                  <input type="text" id="mainMaterialSearch" placeholder="Ana mamül ara (ad/kod)..." style="width: 100%; padding: 8px; font-size: 0.8rem; border: 1px solid #d1d5db; border-radius: 4px 0 0 4px;">
+                  <button onclick="searchMaterials('main')" style="padding: 8px 12px; font-size: 0.8rem; background: #3b82f6; color: white; border: 1px solid #3b82f6; border-left: none; border-radius: 0 4px 4px 0;">
+                    <i class="fas fa-search"></i>
+                  </button>
+                </div>
+              </div>
+              <div id="mainMaterialsContainer" style="max-height: 700px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 8px; padding: 15px; background: #f9fafb;">
+                ${mainMaterials.length > 0 ? mainMaterials.map(rm => `
+                  <label class="material-item" style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #e5e7eb; font-size: 0.85rem;" data-name="${rm.name.toLowerCase()}" data-code="${(rm.code || '').toLowerCase()}">
+                    <input type="checkbox" 
+                      class="main-material-checkbox" 
+                      value="${rm.id}" 
+                      ${currentSelection.mainMaterials.some(sel => sel.id === rm.id) ? 'checked' : ''}
+                      style="width: 16px; height: 16px; margin-right: 12px;">
+                    <div style="flex: 1;">
+                      <div style="font-weight: 500; color: #1f2937;">${rm.name}</div>
+                      <div style="font-size: 0.75rem; color: #6b7280;">
+                        Kod: ${rm.code || '-'} | Stok: ${rm.quantity} ${rm.unit}
+                      </div>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-left: 10px;">
+                      <span style="margin-right: 8px; color: #6b7280; font-size: 0.75rem;">Miktar:</span>
+                      <input type="number" 
+                        class="material-quantity" 
+                        value="${getQuantity(currentSelection.mainMaterials, rm.id)}" 
+                        min="1" 
+                        style="width: 60px; height: 28px; font-size: 0.8rem; border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 6px;">
+                    </div>
+                  </label>
+                `).join('') : '<div style="padding: 25px; text-align: center; color: #6b7280; font-size: 0.85rem;">Ana mamül bulunamadı</div>'}
+              </div>
+            </div>
+            
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="color: #15803d; font-size: 1.05rem;">
+                  <i class="fas fa-cube"></i> Yan Mamül (Toplam: ${subMaterials.length})
+                </h4>
+                <div class="search-box" style="display: flex; align-items: center; width: 300px;">
+                  <input type="text" id="subMaterialSearch" placeholder="Yan mamül ara (ad/kod)..." style="width: 100%; padding: 8px; font-size: 0.8rem; border: 1px solid #d1d5db; border-radius: 4px 0 0 4px;">
+                  <button onclick="searchMaterials('sub')" style="padding: 8px 12px; font-size: 0.8rem; background: #22c55e; color: white; border: 1px solid #22c55e; border-left: none; border-radius: 0 4px 4px 0;">
+                    <i class="fas fa-search"></i>
+                  </button>
+                </div>
+              </div>
+              <div id="subMaterialsContainer" style="max-height: 700px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 8px; padding: 15px; background: #f9fafb;">
+                ${subMaterials.length > 0 ? subMaterials.map(rm => `
+                  <label class="material-item" style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #e5e7eb; font-size: 0.85rem;" data-name="${rm.name.toLowerCase()}" data-code="${(rm.code || '').toLowerCase()}">
+                    <input type="checkbox" 
+                      class="sub-material-checkbox" 
+                      value="${rm.id}" 
+                      ${currentSelection.subMaterials.some(sel => sel.id === rm.id) ? 'checked' : ''}
+                      style="width: 16px; height: 16px; margin-right: 12px;">
+                    <div style="flex: 1;">
+                      <div style="font-weight: 500; color: #1f2937;">${rm.name}</div>
+                      <div style="font-size: 0.75rem; color: #6b7280;">
+                        Kod: ${rm.code || '-'} | Stok: ${rm.quantity} ${rm.unit}
+                      </div>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-left: 10px;">
+                      <span style="margin-right: 8px; color: #6b7280; font-size: 0.75rem;">Miktar:</span>
+                      <input type="number" 
+                        class="material-quantity" 
+                        value="${getQuantity(currentSelection.subMaterials, rm.id)}" 
+                        min="1" 
+                        style="width: 60px; height: 28px; font-size: 0.8rem; border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 6px;">
+                    </div>
+                  </label>
+                `).join('') : '<div style="padding: 25px; text-align: center; color: #6b7280; font-size: 0.85rem;">Yan mamül bulunamadı</div>'}
+              </div>
+            </div>
+          </div>
+          
+          <div style="margin-top: 25px; padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #d1d5db;">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+              <div>
+                <strong>Seçili Ana Mamül:</strong> <span id="mainCount">${currentSelection.mainMaterials.length}</span>
+              </div>
+              <div>
+                <strong>Seçili Yan Mamül:</strong> <span id="subCount">${currentSelection.subMaterials.length}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding: 15px; border-top: 1px solid #d1d5db; background: #ffffff;">
+          <button class="btn btn-success" onclick="saveRawMaterialSelection()" style="padding: 8px 20px; font-size: 0.85rem; background: #1e40af; border-color: #1e40af;">
+            <i class="fas fa-check"></i> Seçimi Kaydet
+          </button>
+          <button class="btn btn-outline" onclick="closeModal('rawMaterialModal')" style="padding: 8px 20px; font-size: 0.85rem; border-color: #6b7280; color: #6b7280;">İptal</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  
+  // Arama input ve buton olayları
+  document.getElementById('mainMaterialSearch').addEventListener('input', () => searchMaterials('main'));
+  document.getElementById('subMaterialSearch').addEventListener('input', () => searchMaterials('sub'));
+  document.querySelectorAll('.main-material-checkbox, .sub-material-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateMaterialCounts);
+  });
+  document.querySelectorAll('.material-quantity').forEach(input => {
+    input.addEventListener('change', updateMaterialCounts);
+  });
+}
+
+function updateMaterialCounts() {
+  const mainCheckboxes = document.querySelectorAll('.main-material-checkbox:checked');
+  const subCheckboxes = document.querySelectorAll('.sub-material-checkbox:checked');
+  
+  const mainCountEl = document.getElementById('mainCount');
+  const subCountEl = document.getElementById('subCount');
+  
+  if (mainCountEl) mainCountEl.textContent = mainCheckboxes.length;
+  if (subCountEl) subCountEl.textContent = subCheckboxes.length;
+}
+function saveRawMaterialSelection() {
+  const rowId = document.getElementById('currentRowId').value;
+  
+  // Ana mamül seçimleri
+  const mainMaterials = [];
+  document.querySelectorAll('.main-material-checkbox:checked').forEach(checkbox => {
+    const quantityInput = checkbox.closest('label').querySelector('.material-quantity');
+    const quantity = parseInt(quantityInput.value) || 1;
+    mainMaterials.push({ id: checkbox.value, quantity });
+  });
+  
+  // Yan mamül seçimleri
+  const subMaterials = [];
+  document.querySelectorAll('.sub-material-checkbox:checked').forEach(checkbox => {
+    const quantityInput = checkbox.closest('label').querySelector('.material-quantity');
+    const quantity = parseInt(quantityInput.value) || 1;
+    subMaterials.push({ id: checkbox.value, quantity });
+  });
+  
+  rawMaterialSelections[rowId] = {
+    ...rawMaterialSelections[rowId],
+    mainMaterials,
+    subMaterials
+  };
+  
+  const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
+  const selectedRawMaterialsDiv = row.querySelector('.selected-raw-materials');
+  
+  const mainCount = mainMaterials.length;
+  const subCount = subMaterials.length;
+  const totalCount = mainCount + subCount;
+  
+  if (selectedRawMaterialsDiv) {
+    selectedRawMaterialsDiv.innerHTML = `${totalCount} hammadde seçili (Ana: ${mainCount}, Yan: ${subCount})`;
+  }
+  
+  const stockBadge = row.querySelector('td:nth-child(6) .badge');
+  if (stockBadge) {
+    stockBadge.className = 'badge success';
+    stockBadge.textContent = 'Hazır';
+  }
+  
+  closeModal('rawMaterialModal');
+  updateRecipeDetails();
+  
+  showNotification('Başarılı', `${totalCount} hammadde seçildi.`, 'success');
+}
+
+function removeProductRow(rowId) {
+  const row = document.querySelector(`tr[data-row-id="${rowId}"]`);
+  if (row) {
+    row.remove();
+    delete rawMaterialSelections[rowId];
+    updateRecipeDetails();
+  }
+}
+
+
+
 window.loadUretimListesi = loadUretimListesi;
 window.loadUretimTakip = loadUretimTakip;
 window.loadIsEmriVer = loadIsEmriVer;
@@ -2868,4 +3144,10 @@ window.loadRecipeDetails = loadRecipeDetails;
 window.convertToProduction = convertToProduction;
 window.updateProgress = updateProgress;
 window.startProduction = startProduction;
+window.loadProductsByCategory = loadProductsByCategory;
+window.updateProductSelection = updateProductSelection;
+window.openRawMaterialModal = openRawMaterialModal;
+window.updateMaterialCounts = updateMaterialCounts;
+window.saveRawMaterialSelection = saveRawMaterialSelection;
+window.removeProductRow = removeProductRow;
 

@@ -1,36 +1,33 @@
-// storage-updated.js - ANA MAMÜL & YAN MAMÜL Yönetimi Modülü
 // ========================================
 // ANA MAMÜL & YAN MAMÜL YÖNETİMİ FONKSİYONLARI
 // ========================================
-
-// storage-updated.js - loadDepo fonksiyonunu güncelle (satır 10 civarı)
 function loadDepo() {
     const content = `
         <div class="page-header">
-            <h1 class="page-title"><i class="fas fa-warehouse"></i> Mamül Yönetimi</h1>
-            <p class="page-subtitle">Ana Mamül ve Yan Mamül stoklarını yönetin</p>
+            <h1 class="page-title"><i class="fas fa-warehouse"></i> Hammadde Deposu</h1>
+            <p class="page-subtitle">Ana Mamül ve Yan Mamül hammadde stoklarını yönetin</p>
         </div>
         
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon primary"><i class="fas fa-cube"></i></div>
-                <div class="stat-value">${firebaseData.products.filter(p => p.type === 'ana_mamul').length}</div>
-                <div class="stat-label">Ana Mamül</div>
+                <div class="stat-value">${firebaseData.stock.filter(s => s.type === 'ana_mamul').length}</div>
+                <div class="stat-label">Ana Mamül Hammadde</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon success"><i class="fas fa-cubes"></i></div>
-                <div class="stat-value">${firebaseData.products.filter(p => p.type === 'yan_mamul').length}</div>
-                <div class="stat-label">Yan Mamül</div>
+                <div class="stat-value">${firebaseData.stock.filter(s => s.type === 'yan_mamul').length}</div>
+                <div class="stat-label">Yan Mamül Hammadde</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon warning"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="stat-value">${firebaseData.stock.filter(s => s.quantity <= s.minStock).length}</div>
+                <div class="stat-label">Kritik Stok</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon info"><i class="fas fa-box"></i></div>
-                <div class="stat-value">${firebaseData.stock?.length || 0}</div>
+                <div class="stat-value">${firebaseData.stock.length}</div>
                 <div class="stat-label">Toplam Hammadde</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon danger"><i class="fas fa-exclamation-triangle"></i></div>
-                <div class="stat-value">${firebaseData.stock?.filter(s => s.quantity <= s.minStock).length || 0}</div>
-                <div class="stat-label">Kritik Hammadde</div>
             </div>
         </div>
 
@@ -38,32 +35,28 @@ function loadDepo() {
             <div class="card-header">
                 <div class="flex justify-between items-center">
                     <div>
-                        <h3 class="card-title">Mamül Listesi</h3>
-                        <p class="card-subtitle">Ana Mamül ve Yan Mamül stokları</p>
+                        <h3 class="card-title">Hammadde Stok Listesi</h3>
+                        <p class="card-subtitle">Ana mamül ve yan mamül hammaddeleri</p>
                     </div>
-                    <button class="btn btn-primary" onclick="addMamul()">
-                        <i class="fas fa-plus"></i> Mamül Ekle
+                    <button class="btn btn-primary" onclick="addHammadde()">
+                        <i class="fas fa-plus"></i> Hammadde Ekle
                     </button>
                 </div>
             </div>
             <div class="card-body">
-                <!-- Mamül Türü Sekmeleri -->
                 <div class="tabs" style="margin-bottom: 20px;">
-                    <button class="tab active" onclick="filterMamulByType('all', this)">
-                        <i class="fas fa-th-list"></i> Tümü
+                    <button class="tab active" onclick="filterHammaddeByType('ana_mamul', this)">
+                        <i class="fas fa-cube"></i> Ana Mamül Hammaddeleri
                     </button>
-                    <button class="tab" onclick="filterMamulByType('ana_mamul', this)">
-                        <i class="fas fa-cube"></i> Ana Mamül
-                    </button>
-                    <button class="tab" onclick="filterMamulByType('yan_mamul', this)">
-                        <i class="fas fa-cubes"></i> Yan Mamül
+                    <button class="tab" onclick="filterHammaddeByType('yan_mamul', this)">
+                        <i class="fas fa-cubes"></i> Yan Mamül Hammaddeleri
                     </button>
                 </div>
 
                 <div class="filter-bar" style="margin-bottom: 20px;">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
-                        <input type="text" placeholder="Mamül ara..." onkeyup="searchMamul(this.value)">
+                        <input type="text" placeholder="Hammadde ara..." onkeyup="searchHammadde(this.value)">
                     </div>
                 </div>
 
@@ -71,18 +64,20 @@ function loadDepo() {
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>Mamül Kodu</th>
-                                <th>Mamül Adı</th>
+                                <th>Kod</th>
+                                <th>Hammadde Adı</th>
                                 <th>Tip</th>
+                                <th>Kategori</th>
                                 <th>Miktar</th>
                                 <th>Birim</th>
                                 <th>Min. Stok</th>
                                 <th>Durum</th>
+                                <th>Son Güncelleme</th>
                                 <th>İşlemler</th>
                             </tr>
                         </thead>
-                        <tbody id="mamulTableBody">
-                            ${generateMamulTableRows()}
+                        <tbody id="hammaddeTableBody">
+                            ${generateHammaddeTableRows()}
                         </tbody>
                     </table>
                 </div>
@@ -92,7 +87,283 @@ function loadDepo() {
     document.getElementById('pageContent').innerHTML = content;
 }
 
-// addMamul fonksiyonunu güncelle - KATEGORİ KALDIRILIYOR
+
+function addHammadde() {
+    let modal = document.getElementById('hammaddeAddModal');
+    if (modal) modal.remove();
+    
+    const modalHTML = `
+        <div id="hammaddeAddModal" class="modal show">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Yeni Hammadde Ekle</h3>
+                    <button class="modal-close" onclick="closeModal('hammaddeAddModal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="hammaddeAddForm">
+                        <div class="form-group">
+                            <label class="form-label">Hammadde Tipi <span style="color: red;">*</span></label>
+                            <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                                <label style="flex: 1; display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s;">
+                                    <input type="radio" name="hammaddeType" value="ana_mamul" checked onchange="updateHammaddeCode()" style="margin-right: 10px;">
+                                    <i class="fas fa-cube" style="margin-right: 10px; color: #667eea; font-size: 20px;"></i>
+                                    <div>
+                                        <strong>Ana Mamül Hammaddesi</strong>
+                                        <div style="font-size: 12px; color: #666;">Ana ürün için kullanılan hammaddeler</div>
+                                    </div>
+                                </label>
+                                <label style="flex: 1; display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s;">
+                                    <input type="radio" name="hammaddeType" value="yan_mamul" onchange="updateHammaddeCode()" style="margin-right: 10px;">
+                                    <i class="fas fa-cubes" style="margin-right: 10px; color: #f687b3; font-size: 20px;"></i>
+                                    <div>
+                                        <strong>Yan Mamül Hammaddesi</strong>
+                                        <div style="font-size: 12px; color: #666;">Yardımcı ürün için kullanılan hammaddeler</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Hammadde Kodu</label>
+                                <input type="text" class="form-control" id="newHammaddeCode" 
+                                       value="HAM-ANA-${String(firebaseData.stock.filter(s => s.type === 'ana_mamul').length + 1).padStart(4, '0')}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Barkod</label>
+                                <input type="text" class="form-control" id="newHammaddeBarcode" placeholder="Barkod numarası">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Hammadde Adı <span style="color: red;">*</span></label>
+                                <input type="text" class="form-control" id="newHammaddeName" required placeholder="Örn: LED Driver 24V">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Kategori</label>
+                                <select class="form-control" id="newHammaddeCategory">
+                                    <option value="Elektronik">Elektronik</option>
+                                    <option value="Mekanik">Mekanik</option>
+                                    <option value="Plastik">Plastik</option>
+                                    <option value="Metal">Metal</option>
+                                    <option value="Cam">Cam</option>
+                                    <option value="Kimyasal">Kimyasal</option>
+                                    <option value="Diğer">Diğer</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Miktar</label>
+                                <input type="number" class="form-control" id="newHammaddeQuantity" value="0" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Birim</label>
+                                <select class="form-control" id="newHammaddeUnit" required>
+                                    <option value="adet">Adet</option>
+                                    <option value="kg">Kilogram</option>
+                                    <option value="metre">Metre</option>
+                                    <option value="litre">Litre</option>
+                                    <option value="paket">Paket</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Minimum Stok</label>
+                                <input type="number" class="form-control" id="newHammaddeMinStock" value="10" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Birim Fiyat ($)</label>
+                                <input type="number" class="form-control" id="newHammaddePrice" value="0" min="0" step="0.01">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Açıklama</label>
+                            <textarea class="form-control" id="newHammaddeDescription" rows="3" placeholder="Hammadde hakkında notlar..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-success" onclick="saveHammadde()">
+                        <i class="fas fa-save"></i> Kaydet
+                    </button>
+                    <button class="btn btn-outline" onclick="closeModal('hammaddeAddModal')">İptal</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Radio butonları seçildiğinde border rengini değiştir
+    document.querySelectorAll('input[name="hammaddeType"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('input[name="hammaddeType"]').forEach(r => {
+                r.parentElement.style.borderColor = '#ddd';
+                r.parentElement.style.background = 'white';
+            });
+            if (this.checked) {
+                this.parentElement.style.borderColor = this.value === 'ana_mamul' ? '#667eea' : '#f687b3';
+                this.parentElement.style.background = this.value === 'ana_mamul' ? '#f0f4ff' : '#fff0f5';
+            }
+        });
+    });
+    
+    // İlk açılışta seçili olanı işaretle
+    const checkedRadio = document.querySelector('input[name="hammaddeType"]:checked');
+    if (checkedRadio) {
+        checkedRadio.parentElement.style.borderColor = '#667eea';
+        checkedRadio.parentElement.style.background = '#f0f4ff';
+    }
+}
+
+function generateHammaddeTableRows() {
+    const allHammadde = firebaseData.stock || [];
+    return allHammadde.map(item => `
+        <tr data-hammadde-id="${item.id}" data-type="${item.type || 'ana_mamul'}">
+            <td>${item.code || '-'}</td>
+            <td><strong>${item.name}</strong></td>
+            <td>
+                <span class="badge ${item.type === 'yan_mamul' ? 'info' : 'primary'}">
+                    <i class="fas ${item.type === 'yan_mamul' ? 'fa-cubes' : 'fa-cube'}"></i>
+                    ${item.type === 'yan_mamul' ? 'Yan Mamül' : 'Ana Mamül'}
+                </span>
+            </td>
+            <td>
+                <span class="badge secondary">${item.category || 'Genel'}</span>
+            </td>
+            <td>${item.quantity || 0}</td>
+            <td>${item.unit || 'Adet'}</td>
+            <td>${item.minStock || 0}</td>
+            <td>
+                ${(item.quantity || 0) > (item.minStock || 0)
+                    ? '<span class="badge success">Yeterli</span>'
+                    : (item.quantity || 0) > 0
+                        ? '<span class="badge warning">Kritik</span>'
+                        : '<span class="badge danger">Tükendi</span>'
+                }
+            </td>
+            <td>${item.lastUpdate || new Date().toLocaleDateString('tr-TR')}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="action-btn view" onclick="showHammaddeDetails('${item.id}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="action-btn edit" onclick="editHammadde('${item.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn delete" onclick="deleteHammadde('${item.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterHammaddeByType(type, button) {
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    button.classList.add('active');
+
+    const rows = document.querySelectorAll('#hammaddeTableBody tr');
+    rows.forEach(row => {
+        const rowType = row.dataset.type || 'ana_mamul';
+        if (rowType === type) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    updateVisibleRowCount();
+}
+
+
+function searchHammadde(query) {
+    const rows = document.querySelectorAll('#hammaddeTableBody tr');
+    rows.forEach(row => {
+        const hammaddeId = row.dataset.hammaddeId;
+        const hammadde = firebaseData.stock.find(s => s.id === hammaddeId);
+        
+        if (!hammadde) return;
+        
+        const searchText = `${hammadde.name} ${hammadde.code} ${hammadde.barcode || ''} ${hammadde.category || ''}`.toLowerCase();
+        if (searchText.includes(query.toLowerCase())) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    updateVisibleRowCount();
+}
+
+
+async function saveHammadde(hammaddeId = null) {
+    const isEdit = !!hammaddeId;
+    const prefix = isEdit ? 'edit' : 'new';
+    
+    const type = document.querySelector('input[name="hammaddeType"]:checked')?.value || 'ana_mamul';
+    const code = document.getElementById(`${prefix}HammaddeCode`).value;
+    const barcode = document.getElementById(`${prefix}HammaddeBarcode`).value;
+    const name = document.getElementById(`${prefix}HammaddeName`).value;
+    const category = document.getElementById(`${prefix}HammaddeCategory`).value;
+    const quantity = parseInt(document.getElementById(`${prefix}HammaddeQuantity`).value) || 0;
+    const unit = document.getElementById(`${prefix}HammaddeUnit`).value;
+    const minStock = parseInt(document.getElementById(`${prefix}HammaddeMinStock`).value) || 0;
+    const price = parseFloat(document.getElementById(`${prefix}HammaddePrice`).value) || 0;
+    const description = document.getElementById(`${prefix}HammaddeDescription`)?.value || '';
+    
+    if (!code || !name || !unit) {
+        showNotification('Hata', 'Lütfen gerekli alanları doldurun.', 'error');
+        return;
+    }
+    
+    const hammaddeData = {
+        code,
+        barcode,
+        name,
+        type,
+        category,
+        quantity,
+        unit,
+        minStock,
+        price,
+        description,
+        lastUpdate: new Date().toLocaleDateString('tr-TR'),
+        active: true
+    };
+    
+    try {
+        if (isEdit) {
+            await window.firestoreService.updateStock(hammaddeId, hammaddeData);
+            showNotification('Güncellendi', 'Hammadde güncellendi.', 'success');
+        } else {
+            await window.firestoreService.addStock(hammaddeData);
+            showNotification('Eklendi', 'Yeni hammadde eklendi.', 'success');
+        }
+        
+        closeModal(isEdit ? 'hammaddeEditModal' : 'hammaddeAddModal');
+        await loadFirebaseData();
+        loadDepo();
+        
+    } catch (error) {
+        console.error('Hammadde kaydetme hatası:', error);
+        showNotification('Hata', 'Hammadde kaydedilemedi.', 'error');
+    }
+}
+
+function updateHammaddeCode() {
+    const selectedType = document.querySelector('input[name="hammaddeType"]:checked').value;
+    const codeField = document.getElementById('newHammaddeCode');
+    
+    if (selectedType === 'ana_mamul') {
+        const count = firebaseData.stock.filter(s => s.type === 'ana_mamul').length + 1;
+        codeField.value = `HAM-ANA-${String(count).padStart(4, '0')}`;
+    } else {
+        const count = firebaseData.stock.filter(s => s.type === 'yan_mamul').length + 1;
+        codeField.value = `HAM-YAN-${String(count).padStart(4, '0')}`;
+    }
+}
+
 function addMamul() {
     let modal = document.getElementById('mamulAddModal');
     if (modal) modal.remove();
@@ -903,7 +1174,7 @@ function generateCategoryFields(category, existingFields = {}) {
     }
 }
 
-// Mamül silme fonksiyonu
+
 async function deleteMamul(mamulId) {
     const mamul = firebaseData.products.find(p => p.id === mamulId);
     if (!mamul) {
@@ -911,7 +1182,7 @@ async function deleteMamul(mamulId) {
         return;
     }
     
-    // Üretimde kullanılıyor mu kontrol et
+ 
     const usedInProduction = firebaseData.production.filter(prod => 
         prod.productId === mamulId
     );
@@ -1048,11 +1319,216 @@ function exportMamulData() {
     downloadCSV(csv, `mamul_raporu_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')}.csv`);
 }
 
+
+function showHammaddeDetails(hammaddeId) {
+    const hammadde = firebaseData.stock.find(s => s.id === hammaddeId);
+    if (!hammadde) {
+        showNotification('Hata', 'Hammadde bulunamadı.', 'error');
+        return;
+    }
+    
+    const modalHTML = `
+        <div id="hammaddeDetailModal" class="modal show">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Hammadde Detayları</h3>
+                    <button class="modal-close" onclick="closeModal('hammaddeDetailModal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="hammadde-detail-grid">
+                        <div class="hammadde-info-card">
+                            <h4>${hammadde.name}</h4>
+                            <div class="hammadde-status ${(hammadde.quantity || 0) > (hammadde.minStock || 0) ? 'sufficient' : (hammadde.quantity || 0) > 0 ? 'critical' : 'empty'}">
+                                <span class="status-indicator"></span>
+                                ${(hammadde.quantity || 0) > (hammadde.minStock || 0) ? 'Yeterli Stok' : (hammadde.quantity || 0) > 0 ? 'Kritik Seviye' : 'Stok Tükendi'}
+                            </div>
+                            <div class="hammadde-type-badge">
+                                <span class="badge ${hammadde.type === 'yan_mamul' ? 'info' : 'primary'}">
+                                    <i class="fas ${hammadde.type === 'yan_mamul' ? 'fa-cubes' : 'fa-cube'}"></i>
+                                    ${hammadde.type === 'yan_mamul' ? 'Yan Mamül Hammaddesi' : 'Ana Mamül Hammaddesi'}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Hammadde Kodu</label>
+                                <input type="text" class="form-control" value="${hammadde.code}" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Barkod</label>
+                                <input type="text" class="form-control" value="${hammadde.barcode || ''}" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Kategori</label>
+                                <input type="text" class="form-control" value="${hammadde.category || 'Genel'}" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Miktar</label>
+                                <input type="text" class="form-control" value="${hammadde.quantity || 0} ${hammadde.unit}" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Min. Stok</label>
+                                <input type="text" class="form-control" value="${hammadde.minStock || 0} ${hammadde.unit}" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Birim Fiyat</label>
+                                <input type="text" class="form-control" value="${hammadde.price || 0} $" readonly>
+                            </div>
+                        </div>
+                        
+                        ${hammadde.description ? `
+                            <div class="form-group">
+                                <label class="form-label">Açıklama</label>
+                                <textarea class="form-control" readonly rows="3">${hammadde.description}</textarea>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" onclick="editHammadde('${hammaddeId}')">
+                        <i class="fas fa-edit"></i> Düzenle
+                    </button>
+                    <button class="btn btn-outline" onclick="closeModal('hammaddeDetailModal')">Kapat</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+
+function editHammadde(hammaddeId) {
+    const hammadde = firebaseData.stock.find(s => s.id === hammaddeId);
+    if (!hammadde) {
+        showNotification('Hata', 'Hammadde bulunamadı.', 'error');
+        return;
+    }
+    
+    let modal = document.getElementById('hammaddeEditModal');
+    if (modal) modal.remove();
+    
+    const modalHTML = `
+        <div id="hammaddeEditModal" class="modal show">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Hammadde Düzenle: ${hammadde.name}</h3>
+                    <button class="modal-close" onclick="closeModal('hammaddeEditModal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="hammaddeEditForm">
+                        <div class="form-group">
+                            <label class="form-label">Hammadde Tipi</label>
+                            <div class="radio-group">
+                                <label class="radio-option">
+                                    <input type="radio" name="hammaddeType" value="ana_mamul" ${hammadde.type === 'ana_mamul' ? 'checked' : ''}>
+                                    <span class="radio-custom"></span>
+                                    <i class="fas fa-cube"></i> Ana Mamül Hammaddesi
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="hammaddeType" value="yan_mamul" ${hammadde.type === 'yan_mamul' ? 'checked' : ''}>
+                                    <span class="radio-custom"></span>
+                                    <i class="fas fa-cubes"></i> Yan Mamül Hammaddesi
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Hammadde Kodu</label>
+                                <input type="text" class="form-control" id="editHammaddeCode" value="${hammadde.code}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Barkod</label>
+                                <input type="text" class="form-control" id="editHammaddeBarcode" value="${hammadde.barcode || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Hammadde Adı</label>
+                                <input type="text" class="form-control" id="editHammaddeName" value="${hammadde.name}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Kategori</label>
+                                <select class="form-control" id="editHammaddeCategory">
+                                    <option value="Elektronik" ${hammadde.category === 'Elektronik' ? 'selected' : ''}>Elektronik</option>
+                                    <option value="Mekanik" ${hammadde.category === 'Mekanik' ? 'selected' : ''}>Mekanik</option>
+                                    <option value="Plastik" ${hammadde.category === 'Plastik' ? 'selected' : ''}>Plastik</option>
+                                    <option value="Metal" ${hammadde.category === 'Metal' ? 'selected' : ''}>Metal</option>
+                                    <option value="Kimyasal" ${hammadde.category === 'Kimyasal' ? 'selected' : ''}>Kimyasal</option>
+                                    <option value="Diğer" ${hammadde.category === 'Diğer' ? 'selected' : ''}>Diğer</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Miktar</label>
+                                <input type="number" class="form-control" id="editHammaddeQuantity" value="${hammadde.quantity || 0}" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Birim</label>
+                                <select class="form-control" id="editHammaddeUnit" required>
+                                    <option value="adet" ${hammadde.unit === 'adet' ? 'selected' : ''}>Adet</option>
+                                    <option value="kg" ${hammadde.unit === 'kg' ? 'selected' : ''}>Kilogram</option>
+                                    <option value="metre" ${hammadde.unit === 'metre' ? 'selected' : ''}>Metre</option>
+                                    <option value="litre" ${hammadde.unit === 'litre' ? 'selected' : ''}>Litre</option>
+                                    <option value="paket" ${hammadde.unit === 'paket' ? 'selected' : ''}>Paket</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Minimum Stok</label>
+                                <input type="number" class="form-control" id="editHammaddeMinStock" value="${hammadde.minStock || 0}" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Birim Fiyat ($)</label>
+                                <input type="number" class="form-control" id="editHammaddePrice" value="${hammadde.price || 0}" min="0" step="0.01">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Açıklama</label>
+                            <textarea class="form-control" id="editHammaddeDescription" rows="3">${hammadde.description || ''}</textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-success" onclick="saveHammadde('${hammaddeId}')">
+                        <i class="fas fa-save"></i> Güncelle
+                    </button>
+                    <button class="btn btn-outline" onclick="closeModal('hammaddeEditModal')">İptal</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+
+async function deleteHammadde(hammaddeId) {
+    const hammadde = firebaseData.stock.find(s => s.id === hammaddeId);
+    if (!hammadde) {
+        showNotification('Hata', 'Hammadde bulunamadı.', 'error');
+        return;
+    }
+    
+    if (confirm(`${hammadde.name} hammaddesini silmek istediğinize emin misiniz?`)) {
+        try {
+            await window.firestoreService.deleteStock(hammaddeId);
+            showNotification('Silindi', `${hammadde.name} başarıyla silindi.`, 'success');
+            await loadFirebaseData();
+            if (currentPage === 'depo') loadDepo();
+        } catch (error) {
+            console.error('Hammadde silme hatası:', error);
+            showNotification('Hata', 'Hammadde silinirken hata oluştu.', 'error');
+        }
+    }
+}
 // ========================================
 // GLOBAL EXPORTS
 // ========================================
 
-// Tüm fonksiyonları global scope'a export et
 window.loadDepo = loadDepo;
 window.generateMamulTableRows = generateMamulTableRows;
 window.filterMamulByType = filterMamulByType;
@@ -1073,5 +1549,15 @@ window.deleteMamul = deleteMamul;
 window.sendCriticalStockNotification = sendCriticalStockNotification;
 window.generateMamulReport = generateMamulReport;
 window.exportMamulData = exportMamulData;
+window.filterHammaddeByType = filterHammaddeByType;
+window.addHammadde = addHammadde;
+window.showHammaddeDetails = showHammaddeDetails;
+window.editHammadde = editHammadde;
+window.deleteHammadde = deleteHammadde;
+window.saveHammadde = saveHammadde;
+window.updateHammaddeCode = updateHammaddeCode;
+window.searchHammadde = searchHammadde;
+
+
 
 console.log('📦 Mamül Yönetimi modülü yüklendi - ANA MAMÜL & YAN MAMÜL sistemi hazır');

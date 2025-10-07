@@ -56,6 +56,92 @@ async function loadAdmin() {
                 </div>
             </div>
         </div>
+
+
+        <!-- Boyut ve Fiyat Yönetimi Bölümü -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-ruler-combined"></i> Ürün Boyut ve Fiyat Yönetimi</h3>
+        <p class="card-subtitle">Ürün boyutları ve fiyatlandırma ayarları</p>
+    </div>
+    <div class="card-body">
+        <div class="tabs">
+            <button class="tab active" onclick="switchSizeTab(this, 'sizeManagement')">
+                <i class="fas fa-ruler"></i> Boyut Tanımları
+            </button>
+            <button class="tab" onclick="switchSizeTab(this, 'sizePricing')">
+                <i class="fas fa-dollar-sign"></i> Boyut Fiyatlandırma
+            </button>
+            <button class="tab" onclick="switchSizeTab(this, 'priceIncrease')">
+                <i class="fas fa-chart-line"></i> Toplu Zam Yap
+            </button>
+        </div>
+        
+        <!-- Boyut Tanımları Sekmesi -->
+        <div id="sizeManagement" class="tab-content active">
+            <button class="btn btn-primary" onclick="addNewSize()" style="margin-bottom: 20px;">
+                <i class="fas fa-plus"></i> Yeni Boyut Ekle
+            </button>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Boyut Adı</th>
+                            <th>Varsayılan Fiyat ($)</th>
+                            <th>Açıklama</th>
+                            <th>Durum</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sizesTableBody">
+                        <!-- Boyutlar buraya yüklenecek -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Boyut Fiyatlandırma Sekmesi -->
+        <div id="sizePricing" class="tab-content" style="display: none;">
+            <div class="alert alert-info" style="margin-bottom: 20px;">
+                <i class="fas fa-info-circle"></i> 
+                Her boyut için kategori bazlı özel fiyatlar tanımlayabilirsiniz.
+            </div>
+            <div id="categoryPricingContainer">
+                <!-- Kategori bazlı fiyatlandırma buraya yüklenecek -->
+            </div>
+        </div>
+        
+        <!-- Toplu Zam Sekmesi -->
+        <div id="priceIncrease" class="tab-content" style="display: none;">
+            <div class="alert alert-warning" style="margin-bottom: 20px;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Dikkat:</strong> Bu işlem tüm boyut fiyatlarını kalıcı olarak değiştirir!
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Zam Oranı (%)</label>
+                    <input type="number" class="form-control" id="priceIncreaseRate" placeholder="Örn: 10" min="0" max="100" step="0.1">
+                    <small class="text-muted">Pozitif değer zam, negatif değer indirim yapar</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Önizleme</label>
+                    <div id="priceIncreasePreview" style="padding: 15px; background: var(--gray-50); border-radius: 8px; min-height: 60px;">
+                        <span style="color: var(--gray-500);">Zam oranı girin ve hesapla butonuna tıklayın</span>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-info" onclick="calculatePriceIncrease()">
+                    <i class="fas fa-calculator"></i> Hesapla ve Önizle
+                </button>
+                <button class="btn btn-success" onclick="applyPriceIncrease()" style="display: none;" id="applyIncreaseBtn">
+                    <i class="fas fa-check"></i> Zamı Uygula
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
         
         <!-- Veri Yönetimi Bölümü -->
         <div class="card">
@@ -1866,6 +1952,360 @@ async function deleteUser(userId) {
     }
 }
 
+// Boyut yönetimi sekmelerini değiştir
+function switchSizeTab(button, tabId) {
+    document.querySelectorAll('.card .tabs .tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.card .tab-content').forEach(content => content.style.display = 'none');
+    
+    button.classList.add('active');
+    const tabContent = document.getElementById(tabId);
+    if (tabContent) {
+        tabContent.style.display = 'block';
+        
+        if (tabId === 'sizeManagement') {
+            loadProductSizes();
+        } else if (tabId === 'sizePricing') {
+            loadCategoryPricing();
+        }
+    }
+}
+
+// Ürün boyutlarını yükle
+async function loadProductSizes() {
+    try {
+        const sizes = await window.firestoreService.getProductSizes() || [];
+        const tbody = document.getElementById('sizesTableBody');
+        
+        if (!tbody) {
+            console.error('Boyutlar tablosu bulunamadı');
+            return;
+        }
+        
+        if (sizes.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--gray-500);">Henüz boyut tanımlanmamış</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = sizes.map(size => `
+            <tr>
+                <td><strong>${size.name}</strong></td>
+                <td><span style="color: var(--success); font-weight: 600;">${size.defaultPrice} $</span></td>
+                <td>${size.description || '-'}</td>
+                <td>
+                    <span class="badge ${size.active !== false ? 'success' : 'secondary'}">
+                        ${size.active !== false ? 'Aktif' : 'Pasif'}
+                    </span>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="action-btn edit" onclick="editSize('${size.id}')" title="Düzenle">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="action-btn delete" onclick="deleteSize('${size.id}')" title="Sil">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Boyutlar yüklenirken hata:', error);
+    }
+}
+
+// Yeni boyut ekle modalı
+function addNewSize() {
+    const existingModal = document.getElementById('sizeModal');
+    if (existingModal) existingModal.remove();
+    
+    const modalHTML = `
+        <div id="sizeModal" class="modal show">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">Yeni Boyut Ekle</h3>
+                    <button class="modal-close" onclick="closeModal('sizeModal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="sizeForm" onsubmit="event.preventDefault();">
+                        <div class="form-group">
+                            <label class="form-label">Boyut Adı</label>
+                            <input type="text" class="form-control" id="sizeName" placeholder="Örn: 1000mm, 500mm" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Varsayılan Fiyat ($)</label>
+                            <input type="number" class="form-control" id="sizeDefaultPrice" placeholder="0.00" step="0.01" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Açıklama</label>
+                            <textarea class="form-control" id="sizeDescription" rows="3" placeholder="Bu boyut hakkında açıklama..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="sizeActive" checked>
+                                <span>Aktif boyut</span>
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-success" onclick="saveSize()">
+                        <i class="fas fa-save"></i> Kaydet
+                    </button>
+                    <button class="btn btn-outline" onclick="closeModal('sizeModal')">İptal</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    setTimeout(() => document.getElementById('sizeName')?.focus(), 100);
+}
+
+// Boyut kaydet
+async function saveSize(sizeId = null) {
+    const name = document.getElementById('sizeName')?.value?.trim();
+    const defaultPrice = parseFloat(document.getElementById('sizeDefaultPrice')?.value || 0);
+    const description = document.getElementById('sizeDescription')?.value?.trim();
+    const active = document.getElementById('sizeActive')?.checked;
+    
+    if (!name || defaultPrice < 0) {
+        showNotification('Hata', 'Boyut adı ve geçerli bir fiyat giriniz', 'error');
+        return;
+    }
+    
+    const sizeData = {
+        name,
+        defaultPrice,
+        description,
+        active,
+        updatedAt: new Date().toISOString()
+    };
+    
+    try {
+        if (sizeId) {
+            await window.firestoreService.updateProductSize(sizeId, sizeData);
+            showNotification('Başarılı', 'Boyut güncellendi', 'success');
+        } else {
+            sizeData.createdAt = new Date().toISOString();
+            await window.firestoreService.addProductSize(sizeData);
+            showNotification('Başarılı', 'Boyut eklendi', 'success');
+        }
+        
+        closeModal('sizeModal');
+        loadProductSizes();
+    } catch (error) {
+        console.error('Boyut kaydetme hatası:', error);
+        showNotification('Hata', 'Boyut kaydedilemedi', 'error');
+    }
+}
+
+// Boyut düzenle
+async function editSize(sizeId) {
+    try {
+        const size = await window.firestoreService.getProductSize(sizeId);
+        if (!size) {
+            showNotification('Hata', 'Boyut bulunamadı', 'error');
+            return;
+        }
+        
+        addNewSize();
+        
+        setTimeout(() => {
+            document.getElementById('sizeName').value = size.name;
+            document.getElementById('sizeDefaultPrice').value = size.defaultPrice;
+            document.getElementById('sizeDescription').value = size.description || '';
+            document.getElementById('sizeActive').checked = size.active !== false;
+            
+            const saveBtn = document.querySelector('#sizeModal .btn-success');
+            if (saveBtn) {
+                saveBtn.innerHTML = '<i class="fas fa-save"></i> Güncelle';
+                saveBtn.onclick = () => saveSize(sizeId);
+            }
+        }, 100);
+    } catch (error) {
+        console.error('Boyut düzenleme hatası:', error);
+        showNotification('Hata', 'Boyut yüklenemedi', 'error');
+    }
+}
+
+// Boyut sil
+async function deleteSize(sizeId) {
+    if (!confirm('Bu boyutu silmek istediğinize emin misiniz?')) return;
+    
+    try {
+        await window.firestoreService.deleteProductSize(sizeId);
+        showNotification('Başarılı', 'Boyut silindi', 'success');
+        loadProductSizes();
+    } catch (error) {
+        console.error('Boyut silme hatası:', error);
+        showNotification('Hata', 'Boyut silinemedi', 'error');
+    }
+}
+
+// Kategori bazlı fiyatlandırmayı yükle
+async function loadCategoryPricing() {
+    const container = document.getElementById('categoryPricingContainer');
+    if (!container) return;
+    
+    try {
+        const sizes = await window.firestoreService.getProductSizes() || [];
+        const categories = [
+            { name: "piksel kontrollü doğrusal armatürler", icon: "fas fa-grip-lines" },
+            { name: "piksel kontrollü noktasal armatürler", icon: "fas fa-dot-circle" },
+            { name: "Çizgisel armatürler", icon: "fas fa-minus" },
+            { name: "Wallwasher armatürler", icon: "fas fa-wave-square" },
+            { name: "Yere Gömme wallwasher armatürler", icon: "fas fa-level-down-alt" },
+            { name: "Spot Armatürler", icon: "fas fa-circle" },
+            { name: "Kontrol Sistemleri", icon: "fas fa-microchip" }
+        ];
+        
+        if (sizes.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: var(--gray-500); padding: 40px;">Önce boyut tanımlamalısınız</p>';
+            return;
+        }
+        
+        container.innerHTML = categories.map(category => `
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-header" style="background: var(--gray-50);">
+                    <h4 style="margin: 0;"><i class="${category.icon}"></i> ${category.name}</h4>
+                </div>
+                <div class="card-body">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        ${sizes.map(size => `
+                            <div class="form-group">
+                                <label class="form-label">${size.name}</label>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="price_${category.name}_${size.id}" 
+                                       placeholder="${size.defaultPrice} $" 
+                                       value="${size.defaultPrice}"
+                                       step="0.01" 
+                                       min="0">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        container.innerHTML += `
+            <button class="btn btn-success" onclick="saveCategoryPricing()">
+                <i class="fas fa-save"></i> Tüm Fiyatları Kaydet
+            </button>
+        `;
+    } catch (error) {
+        console.error('Kategori fiyatlandırma yükleme hatası:', error);
+    }
+}
+
+// Kategori fiyatlandırmayı kaydet
+async function saveCategoryPricing() {
+    try {
+        const sizes = await window.firestoreService.getProductSizes() || [];
+        const categories = [
+            "piksel kontrollü doğrusal armatürler",
+            "piksel kontrollü noktasal armatürler",
+            "Çizgisel armatürler",
+            "Wallwasher armatürler",
+            "Yere Gömme wallwasher armatürler",
+            "Spot Armatürler",
+            "Kontrol Sistemleri"
+        ];
+        
+        const pricingData = {};
+        
+        categories.forEach(category => {
+            pricingData[category] = {};
+            sizes.forEach(size => {
+                const input = document.getElementById(`price_${category}_${size.id}`);
+                if (input) {
+                    pricingData[category][size.id] = parseFloat(input.value) || size.defaultPrice;
+                }
+            });
+        });
+        
+        await window.firestoreService.saveCategoryPricing(pricingData);
+        showNotification('Başarılı', 'Kategori fiyatlandırması kaydedildi', 'success');
+    } catch (error) {
+        console.error('Fiyatlandırma kaydetme hatası:', error);
+        showNotification('Hata', 'Fiyatlandırma kaydedilemedi', 'error');
+    }
+}
+
+// Zam hesapla ve önizle
+async function calculatePriceIncrease() {
+    const rate = parseFloat(document.getElementById('priceIncreaseRate')?.value || 0);
+    
+    if (rate === 0) {
+        showNotification('Uyarı', 'Lütfen bir zam oranı girin', 'warning');
+        return;
+    }
+    
+    try {
+        const sizes = await window.firestoreService.getProductSizes() || [];
+        const preview = document.getElementById('priceIncreasePreview');
+        
+        let html = '<div style="max-height: 300px; overflow-y: auto;">';
+        html += '<table class="table"><thead><tr><th>Boyut</th><th>Mevcut</th><th>Yeni</th><th>Fark</th></tr></thead><tbody>';
+        
+        sizes.forEach(size => {
+            const oldPrice = size.defaultPrice;
+            const newPrice = oldPrice * (1 + rate / 100);
+            const diff = newPrice - oldPrice;
+            
+            html += `
+                <tr>
+                    <td><strong>${size.name}</strong></td>
+                    <td>${oldPrice.toFixed(2)} $</td>
+                    <td style="color: ${diff > 0 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${newPrice.toFixed(2)} $</td>
+                    <td style="color: ${diff > 0 ? 'var(--success)' : 'var(--danger)'};">${diff > 0 ? '+' : ''}${diff.toFixed(2)} $</td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table></div>';
+        preview.innerHTML = html;
+        
+        document.getElementById('applyIncreaseBtn').style.display = 'inline-flex';
+    } catch (error) {
+        console.error('Zam hesaplama hatası:', error);
+        showNotification('Hata', 'Zam hesaplanamadı', 'error');
+    }
+}
+
+// Zamı uygula
+async function applyPriceIncrease() {
+    const rate = parseFloat(document.getElementById('priceIncreaseRate')?.value || 0);
+    
+    if (!confirm(`%${rate} oranında zam uygulanacak. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?`)) {
+        return;
+    }
+    
+    try {
+        const sizes = await window.firestoreService.getProductSizes() || [];
+        
+        for (const size of sizes) {
+            const newPrice = size.defaultPrice * (1 + rate / 100);
+            await window.firestoreService.updateProductSize(size.id, {
+                defaultPrice: parseFloat(newPrice.toFixed(2)),
+                lastPriceUpdate: new Date().toISOString(),
+                lastPriceIncreaseRate: rate
+            });
+        }
+        
+        showNotification('Başarılı', `Tüm fiyatlara %${rate} zam uygulandı`, 'success');
+        document.getElementById('priceIncreaseRate').value = '';
+        document.getElementById('priceIncreasePreview').innerHTML = '<span style="color: var(--gray-500);">Zam oranı girin ve hesapla butonuna tıklayın</span>';
+        document.getElementById('applyIncreaseBtn').style.display = 'none';
+        
+        loadProductSizes();
+    } catch (error) {
+        console.error('Zam uygulama hatası:', error);
+        showNotification('Hata', 'Zam uygulanamadı', 'error');
+    }
+}
 
 
 // Global olarak export et
@@ -1907,6 +2347,17 @@ window.handleFieldTypeChange = handleFieldTypeChange;
 window.displayCategoryModalFields = displayCategoryModalFields;
 window.getFieldTypeBadgeClass = getFieldTypeBadgeClass;
 window.getFieldTypeDisplayName = getFieldTypeDisplayName;
+window.switchSizeTab = switchSizeTab;
+window.loadProductSizes = loadProductSizes;
+window.addNewSize = addNewSize;
+window.saveSize = saveSize;
+window.editSize = editSize;
+window.deleteSize = deleteSize;
+window.loadCategoryPricing = loadCategoryPricing;
+window.saveCategoryPricing = saveCategoryPricing;
+window.calculatePriceIncrease = calculatePriceIncrease;
+window.applyPriceIncrease = applyPriceIncrease;
+
 
 
 

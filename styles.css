@@ -1,4 +1,7 @@
  :root {
+            --primary-color: #172d4c;
+            --accent-color: #00fefb;
+             --white: #ffffff;
             --primary: #172d4c;
             --primary-light: #00fefb;
             --primary-dark: #00fefb;
@@ -21,6 +24,8 @@
             --info: #3B82F6;
         }
 
+  
+
         * {
             margin: 0;
             padding: 0;
@@ -36,17 +41,30 @@
 
         /* LOGIN SCREEN */
         .login-container {
+            background: linear-gradient(135deg, var(--primary-color) 0%, rgb(2 2 51) 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 10px;
         }
 
+
+        .login-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%2300fefb" fill-opacity="0.1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,138.7C960,139,1056,117,1152,117.3C1248,117,1344,139,1392,149.3L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+    background-size: cover;
+    pointer-events: none;
+}
+
         .login-card {
-            background: var(--white);
             border-radius: 24px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            box-shadow: 10px 40px 45px -5px rgba(254, 251, 251, 0.1), 10px 40px 40px -5px rgba(254, 254, 254, 0.04);
             overflow: hidden;
             width: 100%;
             max-width: 420px;
@@ -54,8 +72,8 @@
         }
 
         .login-header {
-            background: #172d4c;
-            padding: 40px 40px 30px;
+            
+            padding: 20px 20px 20px;
             text-align: center;
             color: var(--white);
         }
@@ -88,7 +106,7 @@
             display: block;
             font-weight: 600;
             font-size: 14px;
-            color: var(--gray-700);
+            color: #00fefb;
             margin-bottom: 8px;
         }
 
@@ -224,7 +242,7 @@
         /* LAYOUT */
         .app-layout {
             display: flex;
-            height: calc(100vh - 72px);
+            height: calc(100vh - 2px);
         }
 
         /* SIDEBAR */
@@ -3559,8 +3577,6 @@ body.modal-open {
     }
 }
 
-
-/* Stok Kart Detay Modal - Yenilenmiş Tasarım */
 .stock-detail-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -3646,7 +3662,6 @@ body.modal-open {
     color: var(--gray-800);
 }
 
-/* Açıklama Alanı */
 .description-section {
     background: linear-gradient(135deg, #f6f8fb 0%, #ffffff 100%);
     padding: 20px;
@@ -3669,7 +3684,7 @@ body.modal-open {
     font-size: 14px;
 }
 
-/* Yeni Stok Kart Ekleme Modal - Geliştirilmiş */
+
 .stock-form-header {
     background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
     margin: -24px -24px 24px -24px;
@@ -3703,7 +3718,7 @@ body.modal-open {
     border-bottom: 2px solid var(--primary);
 }
 
-/* Özellik Ekleme Alanı */
+
 .spec-add-container {
     background: white;
     padding: 15px;
@@ -3836,9 +3851,6 @@ body.modal-open {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
-
-
-/* Teklif Formu İyileştirmeleri */
 
 
 @media (max-width: 768px) {
